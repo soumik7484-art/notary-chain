@@ -43,6 +43,7 @@ export default function SendScreen({ account, onComplete }) {
           setSuccessResult(res.data);
           setLoading(false);
           toast.success(`Successfully sent $${amount} to ${recipient}!`);
+          if (onComplete) onComplete(res.data);
         }, 500);
       }, 2200);
 

@@ -23,6 +23,7 @@ export default function WithdrawScreen({ account }) {
       const res = await withdrawToBank(amount, accountNumber, routingNumber);
       setResult(res.data);
       toast.success(`Bank payout of $${amount} initiated!`);
+      if (onComplete) onComplete(res.data);
     } catch (err) {
       toast.error('Payout failed');
     } finally {

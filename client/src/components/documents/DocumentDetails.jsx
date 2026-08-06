@@ -1,196 +1,220 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useParams, Link } from 'react-router-dom';
 import {
-  HiOutlineDocumentText,
-  HiOutlineShieldCheck,
-  HiOutlineSparkles,
-  HiOutlineClock,
-  HiOutlineShare,
-  HiOutlineArrowDownTray,
-  HiOutlineCheckBadge,
-} from 'react-icons/hi2';
-import AIInsightsPanel from './AIInsightsPanel';
+  FileText, ShieldCheck, Clock, Share2, Download,
+  CheckCircle2, XCircle, Copy, ExternalLink, ArrowLeft,
+  Sparkles, ShieldAlert, Cpu
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import Button from '../common/Button';
+import Card from '../common/Card';
+import Badge from '../common/Badge';
 
-const DEMO_FRAUD = {
-  overallRiskScore: 98,
-  riskLevel: 'low',
-  ocrConsistency: 99,
-  metadataIntegrity: 97,
-  pixelAnalysis: 'clean',
-  deepfakeScore: 2,
-  faceVerification: 'not_applicable',
-  signatureVerification: 'pending',
-  flags: [],
-};
+const DEMO_HASH = "0x7a8f9c1e2b3d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a";
+const DEMO_WALLET = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
 
 const DocumentDetails = () => {
   const { id: documentId } = useParams();
-  const [activeTab, setActiveTab] = useState('preview');
+  const [docStatus, setDocStatus] = useState('Verified');
 
-  const TABS = [
-    { id: 'preview', label: 'Preview', icon: <HiOutlineDocumentText /> },
-    { id: 'ai', label: 'AI Analysis', icon: <HiOutlineSparkles /> },
-    { id: 'insights', label: 'AI Insights', icon: <HiOutlineCheckBadge /> },
-    { id: 'audit', label: 'Audit Trail', icon: <HiOutlineClock /> },
-    { id: 'verification', label: 'Verification', icon: <HiOutlineShieldCheck /> },
-  ];
+  const copyHash = () => {
+    navigator.clipboard.writeText(DEMO_HASH);
+    toast.success('SHA-256 Hash copied to clipboard!');
+  };
+
+  const handleApprove = () => {
+    setDocStatus('Verified');
+    toast.success('Document verification approved & signed on Polygon!');
+  };
+
+  const handleReject = () => {
+    setDocStatus('Rejected');
+    toast.error('Document verification rejected.');
+  };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 md:p-8 w-full">
+    <div className="w-full space-y-6 text-[#2E2A26]">
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-indigo-500/20 text-indigo-400 rounded-2xl border border-indigo-500/20">
-            <HiOutlineDocumentText size={32} />
-          </div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-[#E8E2DA]">
+        <div className="flex items-center gap-3.5">
+          <Link to="/documents" className="p-2 rounded-xl bg-white border border-[#E8E2DA] hover:bg-[#F6F3EE] transition-colors">
+            <ArrowLeft className="w-4 h-4 text-[#55504B]" />
+          </Link>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white dark:text-white text-slate-900 flex items-center gap-3 flex-wrap">
-              Q3 Financial Report.pdf
-              <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md text-xs font-semibold tracking-wide uppercase">
-                ✓ Verified
-              </span>
-            </h1>
-            <p className="text-slate-400 mt-1 text-sm">
-              Uploaded by Jane Doe · Oct 24, 2023 · ID: {documentId || 'DOC-908234'}
+            <div className="flex items-center gap-3">
+              <h1 className="font-display text-2xl font-700 text-[#2E2A26] tracking-tight">
+                Q3 Financial Report.pdf
+              </h1>
+              <Badge variant={docStatus === 'Verified' ? 'success' : docStatus === 'Rejected' ? 'danger' : 'warning'}>
+                {docStatus}
+              </Badge>
+            </div>
+            <p className="text-xs text-[#7B746E] mt-0.5">
+              ID: {documentId || 'DOC-908234'} · Uploaded by Jane Doe
             </p>
           </div>
         </div>
-        <div className="flex gap-3 flex-shrink-0">
-          <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 transition-colors flex items-center gap-2 text-sm">
-            <HiOutlineShare className="w-4 h-4" /> Share
-          </button>
-          <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 text-sm">
-            <HiOutlineArrowDownTray className="w-4 h-4" /> Download
-          </button>
+
+        <div className="flex items-center gap-2.5">
+          <Button variant="secondary" size="sm" icon={Share2} onClick={() => toast.success('Sharing link copied!')}>
+            Share
+          </Button>
+          <Button variant="primary" size="sm" icon={Download} onClick={() => toast.success('Downloading document...')}>
+            Download PDF
+          </Button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-800 dark:border-slate-800 border-slate-200 mb-8 overflow-x-auto">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 pb-3.5 px-4 font-medium text-sm transition-all relative whitespace-nowrap flex-shrink-0 ${
-              activeTab === tab.id
-                ? 'text-indigo-400'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {tab.icon} {tab.label}
-            {activeTab === tab.id && (
-              <motion.div layoutId="activetab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" />
-            )}
-          </button>
-        ))}
+      {/* TWO COLUMN VERIFICATION SPLIT LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        {/* ── LEFT COLUMN: Document Preview & Metadata (7 cols) ──────────────── */}
+        <div className="lg:col-span-7 space-y-6">
+
+          {/* Document Preview Box */}
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-display font-bold text-sm text-[#2E2A26] flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#2D6A4F]" /> Document Preview
+              </h3>
+              <span className="text-xs text-[#7B746E] font-medium">Page 1 of 12</span>
+            </div>
+
+            <div className="w-full h-[420px] bg-[#FFFDF9] border border-[#E8E2DA] rounded-xl flex flex-col items-center justify-center p-8 text-center relative overflow-hidden shadow-inner">
+              <div className="w-16 h-16 rounded-2xl bg-[#F0FAF5] border border-[#B3E4CC] text-[#2D6A4F] flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8" />
+              </div>
+              <h4 className="font-display font-bold text-base text-[#2E2A26] mb-1">Q3 Financial Report.pdf</h4>
+              <p className="text-xs text-[#7B746E] max-w-xs mb-4">
+                Full-page cryptographic PDF preview with OCR data extraction layer
+              </p>
+              <div className="flex gap-2">
+                <Badge variant="neutral">2.4 MB</Badge>
+                <Badge variant="neutral">PDF/A-2b</Badge>
+              </div>
+            </div>
+          </Card>
+
+          {/* Metadata Card */}
+          <Card className="p-6">
+            <h3 className="font-display font-bold text-sm text-[#2E2A26] mb-4">Document Metadata</h3>
+            
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between py-2 border-b border-[#E8E2DA]">
+                <span className="text-[#7B746E]">File SHA-256 Hash</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[#2E2A26] font-semibold">{DEMO_HASH.slice(0, 16)}...</span>
+                  <button onClick={copyHash} className="text-[#2D6A4F] hover:underline flex items-center gap-0.5 font-bold">
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-between py-2 border-b border-[#E8E2DA]">
+                <span className="text-[#7B746E]">Upload Timestamp</span>
+                <span className="font-semibold text-[#2E2A26]">Oct 24, 2023 · 10:14:22 AM UTC</span>
+              </div>
+
+              <div className="flex justify-between py-2 border-b border-[#E8E2DA]">
+                <span className="text-[#7B746E]">Owner Account</span>
+                <span className="font-semibold text-[#2E2A26]">Jane Doe (Acme Corp)</span>
+              </div>
+
+              <div className="flex justify-between py-2">
+                <span className="text-[#7B746E]">Blockchain Network</span>
+                <span className="font-semibold text-[#2D6A4F] flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-[#2D6A4F]" /> Polygon Amoy (Testnet)
+                </span>
+              </div>
+            </div>
+          </Card>
+
+        </div>
+
+        {/* ── RIGHT COLUMN: Verification Timeline & Actions (5 cols) ─────────── */}
+        <div className="lg:col-span-5 space-y-6">
+
+          {/* Verification Badge & Actions Card */}
+          <Card className="p-6 border-t-4 border-t-[#2D6A4F]">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-[#7B746E] uppercase tracking-wider">Verification Badge</span>
+              <Badge variant={docStatus === 'Verified' ? 'success' : 'warning'}>
+                {docStatus}
+              </Badge>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#F0FAF5] border border-[#B3E4CC] mb-5 text-center">
+              <CheckCircle2 className="w-8 h-8 text-[#2D6A4F] mx-auto mb-2" />
+              <h4 className="font-display font-bold text-sm text-[#2E2A26]">Cryptographically Sealed</h4>
+              <p className="text-xs text-[#52796F] mt-0.5">Hash anchored to Polygon block #4829103</p>
+            </div>
+
+            {/* Wallet & Explorer Links */}
+            <div className="space-y-2.5 mb-6 text-xs">
+              <div className="p-2.5 rounded-lg bg-[#F6F3EE] border border-[#E8E2DA] flex justify-between items-center">
+                <span className="text-[#7B746E]">Wallet Address</span>
+                <span className="font-mono text-[#2E2A26] font-semibold">{DEMO_WALLET.slice(0, 10)}...</span>
+              </div>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={copyHash}
+                  className="flex-1 py-2 px-3 rounded-lg border border-[#E8E2DA] bg-white text-[#2E2A26] hover:bg-[#F6F3EE] text-xs font-semibold flex items-center justify-center gap-1.5"
+                >
+                  <Copy className="w-3.5 h-3.5 text-[#52796F]" />
+                  Copy Hash
+                </button>
+                <a
+                  href="https://amoy.polygonscan.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 py-2 px-3 rounded-lg border border-[#E8E2DA] bg-white text-[#2E2A26] hover:bg-[#F6F3EE] text-xs font-semibold flex items-center justify-center gap-1.5"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-[#52796F]" />
+                  View Explorer
+                </a>
+              </div>
+            </div>
+
+            {/* Action Buttons: Approve & Reject */}
+            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-[#E8E2DA]">
+              <Button variant="danger" size="md" icon={XCircle} onClick={handleReject}>
+                Reject
+              </Button>
+              <Button variant="primary" size="md" icon={CheckCircle2} onClick={handleApprove}>
+                Approve
+              </Button>
+            </div>
+          </Card>
+
+          {/* Verification Timeline Card */}
+          <Card className="p-6">
+            <h3 className="font-display font-bold text-sm text-[#2E2A26] mb-5 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[#2D6A4F]" /> Verification Timeline
+            </h3>
+
+            <div className="relative border-l-2 border-[#E8E2DA] ml-3 pl-5 space-y-6">
+              {[
+                { date: 'Oct 24, 10:14 AM', title: 'Document Uploaded', desc: 'SHA-256 hash computed locally', status: 'done' },
+                { date: 'Oct 24, 10:15 AM', title: 'AI OCR & Fraud Check', desc: 'Score: 98/100 (Clean)', status: 'done' },
+                { date: 'Oct 24, 11:02 AM', title: 'Sent for Notarization', desc: 'Notary review queue', status: 'done' },
+                { date: 'Oct 24, 02:30 PM', title: 'Polygon Blockchain Anchored', desc: 'Tx: 0x93...a1b2', status: 'done' },
+              ].map((ev, i) => (
+                <div key={i} className="relative">
+                  <div className="absolute -left-[27px] top-0.5 w-3.5 h-3.5 rounded-full bg-[#2D6A4F] border-2 border-white ring-2 ring-[#B3E4CC]" />
+                  <p className="text-[11px] font-semibold text-[#7B746E] uppercase tracking-wider">{ev.date}</p>
+                  <p className="text-xs font-bold text-[#2E2A26] mt-0.5">{ev.title}</p>
+                  <p className="text-[11px] text-[#55504B] mt-0.5">{ev.desc}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+        </div>
+
       </div>
-
-      {/* Content */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.18 }}
-          className="min-h-[400px]"
-        >
-          {activeTab === 'preview' && (
-            <div className="w-full h-[580px] bg-slate-900/60 dark:bg-slate-900/60 bg-white border border-slate-800 dark:border-slate-800 border-slate-200 rounded-2xl flex items-center justify-center">
-              <div className="text-center">
-                <HiOutlineDocumentText className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400 font-medium">Document Preview Area</p>
-                <p className="text-slate-500 text-sm mt-1">PDF / Image rendering</p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'ai' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-6 bg-slate-800/50 border border-slate-700/50 rounded-2xl backdrop-blur-sm">
-                <h3 className="text-white font-medium mb-4 flex items-center gap-2">
-                  <HiOutlineSparkles className="text-indigo-400" /> Fraud Detection Score
-                </h3>
-                <div className="text-5xl font-bold text-emerald-400 mb-2">
-                  98<span className="text-2xl text-slate-500">/100</span>
-                </div>
-                <p className="text-slate-400 text-sm">Low risk. No tampering detected in metadata or pixels.</p>
-                <div className="mt-4 w-full bg-slate-900 rounded-full h-2">
-                  <div className="bg-emerald-400 h-2 rounded-full" style={{ width: '98%' }} />
-                </div>
-              </div>
-              <div className="p-6 bg-slate-800/50 border border-slate-700/50 rounded-2xl backdrop-blur-sm">
-                <h3 className="text-white font-medium mb-4">Extracted Entities</h3>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex justify-between border-b border-slate-700/60 pb-2.5">
-                    <span className="text-slate-400">Effective Date</span>
-                    <span className="text-white font-medium">Oct 24, 2023</span>
-                  </li>
-                  <li className="flex justify-between border-b border-slate-700/60 pb-2.5">
-                    <span className="text-slate-400">Total Amount</span>
-                    <span className="text-white font-medium">$45,000.00 / quarter</span>
-                  </li>
-                  <li className="flex justify-between border-b border-slate-700/60 pb-2.5">
-                    <span className="text-slate-400">Party A</span>
-                    <span className="text-white font-medium">TechCorp Solutions Inc.</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span className="text-slate-400">Party B</span>
-                    <span className="text-white font-medium">Acme Enterprises Ltd.</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* ── AI INSIGHTS TAB (New Groq-powered feature) ── */}
-          {activeTab === 'insights' && (
-            <AIInsightsPanel
-              documentId={documentId}
-              fraudMetadata={DEMO_FRAUD}
-            />
-          )}
-
-          {activeTab === 'audit' && (
-            <div className="space-y-4">
-              {[
-                { action: 'Document Uploaded', user: 'Jane Doe', time: 'Oct 24, 2023 · 10:14 AM', icon: '📤', color: 'text-blue-400' },
-                { action: 'OCR Analysis Complete', user: 'AI System', time: 'Oct 24, 2023 · 10:14 AM', icon: '🤖', color: 'text-purple-400' },
-                { action: 'Fraud Detection Passed', user: 'AI System', time: 'Oct 24, 2023 · 10:15 AM', icon: '🛡️', color: 'text-emerald-400' },
-                { action: 'Sent for Notarization', user: 'Jane Doe', time: 'Oct 24, 2023 · 11:02 AM', icon: '✍️', color: 'text-amber-400' },
-                { action: 'Notarized & Certified', user: 'Notary John Smith', time: 'Oct 24, 2023 · 2:30 PM', icon: '✅', color: 'text-emerald-400' },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-4 p-4 bg-slate-800/40 border border-slate-700/40 rounded-xl">
-                  <span className="text-xl">{item.icon}</span>
-                  <div className="flex-1">
-                    <p className={`font-medium text-sm ${item.color}`}>{item.action}</p>
-                    <p className="text-slate-500 text-xs mt-0.5">{item.user} · {item.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'verification' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                { label: 'OCR Confidence', value: '99%', status: 'Passed', color: 'emerald' },
-                { label: 'Tamper Detection', value: 'Clean', status: 'Passed', color: 'emerald' },
-                { label: 'Signature Verification', value: 'Pending', status: 'Pending', color: 'amber' },
-              ].map(item => (
-                <div key={item.label} className="p-5 bg-slate-800/50 border border-slate-700/50 rounded-2xl">
-                  <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">{item.label}</p>
-                  <p className="text-2xl font-bold text-white mb-1">{item.value}</p>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    item.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                  }`}>{item.status}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
     </div>
   );
 };

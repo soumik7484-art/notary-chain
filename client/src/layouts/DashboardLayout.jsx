@@ -2,19 +2,27 @@ import React, { useState } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/common/Sidebar';
-import Header from '../components/common/Header';
+import AppTopBar from '../components/common/AppTopBar';
+import MobileBottomNav from '../components/common/MobileBottomNav';
 import { ToastProvider } from '../components/common/Toast';
 import FloatingChatbot from '../components/common/FloatingChatbot';
 import { useAuth } from '../hooks/useAuth';
 
 const DashboardLayout = () => {
   const { isAuthenticated, isLoading } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   if (isLoading) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    return (
+      <div className="min-h-screen bg-[#FAF8F4] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#2D6A4F] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-[#7B746E] font-medium">Loading workspace…</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -22,55 +30,76 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="min-h-screen bg-[#FAF8F4] text-[#2E2A26] flex selection:bg-[#2D6A4F]/20">
       <ToastProvider />
-      
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
-        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
-      </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* ── Mobile Sidebar Backdrop ── */}
       <AnimatePresence>
-        {mobileMenuOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
-              transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-              className="fixed inset-y-0 left-0 z-50 lg:hidden"
-            >
-              <Sidebar collapsed={false} onToggle={() => setMobileMenuOpen(false)} />
-            </motion.div>
-          </>
+        {mobileSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMobileSidebarOpen(false)}
+            className="lg:hidden fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+          />
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex flex-col w-0 overflow-hidden relative">
-        <Header onMenuToggle={() => setMobileMenuOpen(true)} />
-        
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth">
-          <div className="max-w-7xl mx-auto">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
-          </div>
+      {/* ── Left Sidebar (Desktop: persistent, Mobile: drawer) ── */}
+      <div className="hidden lg:flex shrink-0">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((c) => !c)}
+        />
+      </div>
+
+      {/* Mobile Sidebar Drawer */}
+      <AnimatePresence>
+        {mobileSidebarOpen && (
+          <motion.div
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="lg:hidden fixed left-0 top-0 bottom-0 z-50 flex"
+          >
+            <Sidebar
+              collapsed={false}
+              onToggle={() => setMobileSidebarOpen(false)}
+              isMobileDrawer
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Main Area (Topbar + Content) ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Sticky Top Bar */}
+        <AppTopBar
+          onMobileMenuToggle={() => setMobileSidebarOpen((o) => !o)}
+        />
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 
-      {/* Global Floating AI Chatbot */}
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
+
+      {/* Global AI Chatbot */}
       <FloatingChatbot />
     </div>
   );

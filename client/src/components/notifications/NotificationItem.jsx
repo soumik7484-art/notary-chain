@@ -1,59 +1,68 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HiOutlineDocument, HiOutlineBadgeCheck, HiOutlineExclamationCircle, HiOutlineInformationCircle } from 'react-icons/hi';
-import { formatRelativeTime } from '../../utils/formatters';
+import { FileText, CheckCircle2, ShieldAlert, Info } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 
-const iconMap = {
-  document: { icon: HiOutlineDocument, bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400' },
-  approval: { icon: HiOutlineBadgeCheck, bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400' },
-  fraud: { icon: HiOutlineExclamationCircle, bg: 'bg-rose-100 dark:bg-rose-900/30', text: 'text-rose-600 dark:text-rose-400' },
-  info: { icon: HiOutlineInformationCircle, bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' }
+const iconConfig = {
+  document: { icon: FileText, bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  approval: { icon: CheckCircle2, bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  fraud: { icon: ShieldAlert, bg: 'bg-red-50 text-red-700 border-red-200' },
+  info: { icon: Info, bg: 'bg-[#F0FAF5] text-[#2D6A4F] border-[#C3DDD0]' },
 };
 
 const NotificationItem = ({ notification, onClose }) => {
   const { markAsRead } = useNotifications();
   const navigate = useNavigate();
 
+  const notifId = notification.id || notification._id;
+
   const handleClick = () => {
-    if (!notification.isRead) markAsRead(notification.id);
+    if (!notification.isRead) markAsRead(notifId);
     if (notification.actionUrl) {
       navigate(notification.actionUrl);
       onClose();
     }
   };
 
-  const style = iconMap[notification.type] || iconMap.info;
-  const Icon = style.icon;
+  const config = iconConfig[notification.type] || iconConfig.info;
+  const Icon = config.icon;
+
+  const formattedDate = notification.createdAt
+    ? new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : 'Just now';
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={handleClick}
-      className={`relative p-3 rounded-xl border transition-all cursor-pointer ${
+      className={`relative p-4 rounded-xl border transition-all cursor-pointer ${
         notification.isRead
-          ? 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-800/50 opacity-75'
-          : 'bg-primary-50/50 dark:bg-primary-900/10 border-primary-100 dark:border-primary-900/50 shadow-sm'
+          ? 'bg-white border-[#E9E4DD] opacity-80'
+          : 'bg-[#FAF8F4] border-[#2D6A4F]/40 shadow-xs'
       }`}
     >
       {!notification.isRead && (
-        <span className="absolute top-4 right-3 w-2 h-2 rounded-full bg-primary-500" />
+        <span className="absolute top-4 right-3.5 w-2 h-2 rounded-full bg-[#2D6A4F]" />
       )}
       <div className="flex gap-3">
-        <div className={`p-2 rounded-lg shrink-0 h-10 w-10 flex items-center justify-center ${style.bg} ${style.text}`}>
-          <Icon className="w-5 h-5" />
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center border shrink-0 ${config.bg}`}>
+          <Icon className="w-4 h-4" />
         </div>
-        <div className="flex-1 pr-4">
-          <h4 className={`text-sm ${notification.isRead ? 'font-medium text-slate-700 dark:text-slate-300' : 'font-semibold text-slate-900 dark:text-white'}`}>
+        <div className="flex-1 pr-3">
+          {/* Increased font size for Title (text-sm font-bold) */}
+          <h4 className={`text-sm ${notification.isRead ? 'font-bold text-[#2D2A27]' : 'font-bold text-[#2D6A4F]'}`}>
             {notification.title}
           </h4>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+
+          {/* Increased font size for Message (text-xs text-[#55504B]) */}
+          <p className="text-xs text-[#55504B] mt-1 leading-relaxed">
             {notification.message}
           </p>
-          <span className="text-[10px] text-slate-400 mt-2 block">
-            {formatRelativeTime(notification.createdAt)}
+
+          <span className="text-[11px] font-semibold text-[#9B9490] mt-2 block">
+            {formattedDate}
           </span>
         </div>
       </div>

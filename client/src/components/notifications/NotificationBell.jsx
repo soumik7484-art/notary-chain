@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HiOutlineBell } from 'react-icons/hi';
+import { Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotifications } from '../../hooks/useNotifications';
 import NotificationPanel from './NotificationPanel';
@@ -13,22 +13,23 @@ const NotificationBell = () => {
       <div className="relative">
         <button
           onClick={() => setIsOpen(true)}
-          className="relative p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          title="Notifications"
+          className="relative p-2 rounded-lg text-[#7B746E] hover:text-[#2D2A27] hover:bg-[#F6F3EE] border border-[#E9E4DD] transition-all flex items-center justify-center"
         >
           <motion.div
-            animate={unreadCount > 0 ? { rotate: [0, -10, 10, -10, 10, 0] } : {}}
-            transition={{ duration: 0.5, repeat: unreadCount > 0 ? Infinity : 0, repeatDelay: 5 }}
+            animate={unreadCount > 0 ? { rotate: [0, -12, 12, -12, 12, 0] } : {}}
+            transition={{ duration: 0.5, repeat: unreadCount > 0 ? Infinity : 0, repeatDelay: 6 }}
           >
-            <HiOutlineBell className="w-5 h-5" />
+            <Bell className="w-4.5 h-4.5 text-[#55504B]" />
           </motion.div>
-          
+
           <AnimatePresence>
             {unreadCount > 0 && (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0 }}
-                className="absolute top-1 right-1 flex items-center justify-center w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full border border-white dark:border-slate-900"
+                className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-xs"
               >
                 {unreadCount > 99 ? '99+' : unreadCount}
               </motion.div>

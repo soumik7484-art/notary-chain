@@ -13,3 +13,8 @@ export const documentApi = {
   downloadDocument: (id) => api.get(`/documents/${id}/download`, { responseType: 'blob' }),
   getDocumentTimeline: (id) => api.get(`/documents/${id}/timeline`)
 };
+
+export const getDocumentList = async (params) => {
+  const response = await api.get('/documents', { params });
+  return response.data;
+};
