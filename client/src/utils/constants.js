@@ -32,14 +32,14 @@ export const SIDEBAR_MENUS = {
     { label: 'Users',            path: '/admin/users',       icon: 'FiUsers'       },
     { label: 'Audit Logs',       path: '/admin/audit',       icon: 'FiActivity'    },
     { label: 'Analytics',        path: '/admin/analytics',   icon: 'FiPieChart'    },
-    { label: 'Blockchain Status',path: '/blockchain-health', icon: 'FiHexagon'     }
+    { label: 'Wallet Health',    path: '/blockchain-health', icon: 'FiHexagon'     }
   ],
   DEFAULT: [
     { label: 'Dashboard',        path: '/dashboard',         icon: 'FiHome'        },
     { label: 'Polygon Neobank',  path: '/neobank',           icon: 'FiCreditCard'  },
     { label: 'Documents',        path: '/documents',         icon: 'FiFileText'    },
     { label: 'Verifications',    path: '/verifications',     icon: 'FiCheckCircle' },
-    { label: 'Blockchain Status',path: '/blockchain-health', icon: 'FiHexagon'     },
+    { label: 'Wallet Health',    path: '/blockchain-health', icon: 'FiHexagon'     },
     { label: 'Profile',          path: '/profile',           icon: 'FiUser'        },
     { label: 'Settings',         path: '/settings',          icon: 'FiSettings'    }
   ]
@@ -51,4 +51,3 @@ export const API_ENDPOINTS = {
 };
 
 export const FREIGHTER_TESTNET_WALLET = 'GBT73LMEDNGASAHFDULIEINFWZVLWTPJVK6Q3OEGGW6G54AHENA3JLDA';
-

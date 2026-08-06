@@ -12,25 +12,21 @@ const EmptyState = ({
 }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex flex-col items-center justify-center text-center p-8 bg-white/50 dark:bg-slate-800/30 rounded-2xl border border-slate-200 border-dashed dark:border-slate-700 ${className}`}
+      className={`flex flex-col items-center justify-center text-center p-10 bg-white rounded-2xl border border-[#E8E2DA] border-dashed shadow-xs ${className}`}
     >
       {Icon && (
-        <motion.div
-          animate={{ scale: [1, 1.05, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="w-16 h-16 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full flex items-center justify-center mb-4"
-        >
-          <Icon className="w-8 h-8" />
-        </motion.div>
+        <div className="w-14 h-14 bg-[#F0FAF5] text-[#2D6A4F] rounded-2xl flex items-center justify-center mb-4 border border-[#B3E4CC]">
+          {typeof Icon === 'function' || typeof Icon === 'object' ? <Icon className="w-7 h-7" /> : Icon}
+        </div>
       )}
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">{title}</h3>
-      <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6">
+      <h3 className="text-base font-bold text-[#2E2A26] mb-1.5 font-display">{title}</h3>
+      <p className="text-xs text-[#7B746E] max-w-sm mb-6 leading-relaxed">
         {description}
       </p>
       {actionLabel && onAction && (
-        <Button onClick={onAction} variant="primary">
+        <Button onClick={onAction} variant="primary" size="md">
           {actionLabel}
         </Button>
       )}

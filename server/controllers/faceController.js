@@ -1,161 +1,156 @@
-const axios = require('axios');
 const User = require('../models/User');
 const resU = require('../utils/apiResponse');
 const tokenService = require('../services/tokenService');
 const Session = require('../models/Session');
 const LoginHistory = require('../models/LoginHistory');
-
-const AI_FACE_SERVICE_URL = process.env.AI_FACE_SERVICE_URL || 'http://localhost:8000';
+const faceService = require('../services/faceRecognitionService');
 
 /**
- * Register Face Template for Logged-in User
+ * Register Face Biometric Vector directly in MongoDB
  */
 exports.registerFace = async (req, res, next) => {
   try {
-    const { imageBase64, imageUrl } = req.body;
+    const { imageBase64 } = req.body;
     if (!imageBase64) {
       return res.status(400).json({ success: false, message: 'Webcam image base64 data is required' });
     }
 
-    const userId = req.user._id.toString();
-    const name = `${req.user.firstName} ${req.user.lastName}`.trim() || req.user.email;
+    const userId = req.user._id;
 
-    // Call Python AI Microservice
-    const pyResponse = await axios.post(`${AI_FACE_SERVICE_URL}/api/v1/register`, {
-      user_id: userId,
-      name,
-      image_base64: imageBase64,
-      image_url: imageUrl || null,
-    });
+    // Extract 128-dimensional facial biometric descriptor
+    const descriptor = faceService.extract128DFacialDescriptor(imageBase64);
 
-    return resU.success(res, pyResponse.data, 'Face ID registered successfully!');
-  } catch (err) {
-    if (err.response) {
-      return res.status(err.response.status).json(err.response.data);
+    // Save to MongoDB User record
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User profile not found in database' });
     }
+
+    user.faceEmbedding = descriptor;
+    user.faceVerified = true;
+    user.verificationDate = Date.now();
+    user.lastVerification = Date.now();
+    await user.save();
+
+    return resU.success(res, {
+      faceVerified: true,
+      vectorLength: descriptor.length,
+      user: require('../utils/helpers').sanitizeUser(user)
+    }, '128D Face Biometric Key registered in MongoDB successfully!');
+  } catch (err) {
     next(err);
   }
 };
 
 /**
- * Recognize Face & Log In User
+ * Recognize Face & Log In User via MongoDB Biometric Descriptors
  */
 exports.recognizeAndLogin = async (req, res, next) => {
   try {
-    const { imageBase64, threshold } = req.body;
+    const { imageBase64 } = req.body;
     if (!imageBase64) {
       return res.status(400).json({ success: false, message: 'Webcam image base64 data is required' });
     }
 
-    // Call Python AI Microservice for Cosine Similarity Matching
-    const pyResponse = await axios.post(`${AI_FACE_SERVICE_URL}/api/v1/recognize`, {
-      image_base64: imageBase64,
-      threshold: threshold || 0.60,
+    // Extract 128D descriptor from live webcam capture
+    const currentDescriptor = faceService.extract128DFacialDescriptor(imageBase64);
+
+    // Query active users with enrolled face embeddings from MongoDB
+    const enrolledUsers = await User.find({
+      isActive: true,
+      faceEmbedding: { $exists: true, $not: { $size: 0 } }
     });
 
-    const result = pyResponse.data;
+    if (!enrolledUsers || enrolledUsers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        authenticated: false,
+        message: 'No registered face biometric profiles found in MongoDB. Please register your face first.'
+      });
+    }
 
-    if (!result.authenticated || !result.user_id) {
+    // Find best matching user using Cosine Similarity
+    let bestMatchUser = null;
+    let highestMatch = { similarity: 0, confidence: 0 };
+
+    for (const u of enrolledUsers) {
+      const cmp = faceService.compareFacialDescriptors(currentDescriptor, u.faceEmbedding);
+      if (cmp.similarity > highestMatch.similarity) {
+        highestMatch = cmp;
+        bestMatchUser = u;
+      }
+    }
+
+    // Enforce strict 82.0% threshold for authentication match
+    if (!bestMatchUser || highestMatch.similarity < 0.82) {
       return res.status(401).json({
         success: false,
         authenticated: false,
-        message: result.message || 'Unknown Person. Face similarity below threshold.',
-        similarityScore: result.similarity_score,
+        message: `Face Mismatch! Captured face score (${highestMatch.confidence}%) does not match any registered MongoDB profile.`,
+        similarityScore: highestMatch.similarity
       });
     }
 
-    // Find matched user in MongoDB
-    const user = await User.findById(result.user_id);
-    if (!user || !user.isActive) {
-      return res.status(401).json({ success: false, message: 'Account not active or user not found' });
-    }
+    // Authenticated successfully! Issue JWT Token Pair
+    bestMatchUser.lastVerification = Date.now();
+    bestMatchUser.lastLogin = Date.now();
+    await bestMatchUser.save();
 
-    // Issue JWT Token Pair for seamless Face ID Login
-    const tokens = tokenService.generateTokenPair(user._id);
+    const tokens = tokenService.generateTokenPair(bestMatchUser._id);
 
-    // Save session & login history
     try {
       await Session.create({
-        userId: user._id,
-        token: tokenService.hashToken(tokens.refreshToken),
+        userId: bestMatchUser._id,
+        token: await tokenService.hashToken(tokens.refreshToken),
         ...req.deviceInfo
       });
-      await LoginHistory.create({ userId: user._id, status: 'success', ...req.deviceInfo });
+      await LoginHistory.create({ userId: bestMatchUser._id, status: 'success', ...req.deviceInfo });
     } catch (e) {
       console.error('Session logging error:', e);
     }
 
-    const sanitizedUser = require('../utils/helpers').sanitizeUser(user);
+    const sanitizedUser = require('../utils/helpers').sanitizeUser(bestMatchUser);
 
     return resU.success(res, {
       user: sanitizedUser,
       tokens,
       faceMatch: {
-        similarityScore: result.similarity_score,
-        confidencePercentage: result.confidence_percentage,
+        similarityScore: highestMatch.similarity,
+        confidencePercentage: highestMatch.confidence
       }
-    }, `Welcome back, ${user.firstName}! Face ID verified.`);
+    }, `Welcome back, ${bestMatchUser.firstName}! Face ID verified via MongoDB.`);
 
   } catch (err) {
-    if (err.response) {
-      return res.status(err.response.status || 500).json(err.response.data);
-    }
-    
-    // Fallback: If python AI microservice (port 8000) is offline/unreachable, mock authentication for demonstration
-    if (err.code === 'ECONNREFUSED' || err.message?.includes('ECONNREFUSED')) {
-      const demoUser = {
-        _id: 'demo-user-123',
-        id: 'demo-user-123',
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        name: 'Ada Lovelace',
-        email: 'ada@example.com',
-        role: 'company',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-      };
-      const tokens = tokenService.generateTokenPair(demoUser._id);
-      return resU.success(res, {
-        user: demoUser,
-        tokens,
-        faceMatch: {
-          similarityScore: 0.96,
-          confidencePercentage: 96.0
-        }
-      }, 'Welcome back, Ada! Face ID verified (Demo Mode).');
-    }
-
     next(err);
   }
 };
 
 /**
- * Get Face Status for Current User
+ * Get Face Status for Current User from MongoDB
  */
 exports.getFaceStatus = async (req, res, next) => {
   try {
-    const userId = req.user._id.toString();
-    const pyResponse = await axios.get(`${AI_FACE_SERVICE_URL}/api/v1/users/${userId}`);
-    return resU.success(res, pyResponse.data);
+    const user = await User.findById(req.user._id);
+    const isRegistered = !!(user && user.faceEmbedding && user.faceEmbedding.length > 0);
+    return resU.success(res, { registered: isRegistered, faceVerified: !!user?.faceVerified });
   } catch (err) {
-    if (err.response && err.response.status === 404) {
-      return resU.success(res, { registered: false });
-    }
     next(err);
   }
 };
 
 /**
- * Delete Face Registration
+ * Delete Face Registration in MongoDB
  */
 exports.deleteFace = async (req, res, next) => {
   try {
-    const userId = req.user._id.toString();
-    const pyResponse = await axios.delete(`${AI_FACE_SERVICE_URL}/api/v1/users/${userId}`);
-    return resU.success(res, pyResponse.data, 'Face ID template deleted');
-  } catch (err) {
-    if (err.response) {
-      return res.status(err.response.status).json(err.response.data);
+    const user = await User.findById(req.user._id);
+    if (user) {
+      user.faceEmbedding = [];
+      user.faceVerified = false;
+      await user.save();
     }
+    return resU.success(res, null, 'Face ID template deleted from MongoDB');
+  } catch (err) {
     next(err);
   }
 };

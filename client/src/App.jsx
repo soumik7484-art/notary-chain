@@ -40,12 +40,12 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500" />
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF8F4]">
+        <div className="animate-spin rounded-full h-10 w-10 border-3 border-[#2D6A4F] border-t-transparent" />
       </div>
     );
   }
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
 /**
@@ -53,17 +53,8 @@ const ProtectedRoute = ({ children }) => {
  */
 const RoleRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" />;
-  return allowedRoles.includes(user.role) ? children : <Navigate to="/dashboard" />;
-};
-
-/**
- * GuestRoute — Redirects authenticated users away from auth pages.
- */
-const GuestRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-  if (isLoading) return null;
-  return isAuthenticated ? <Navigate to="/dashboard" /> : children;
+  if (!user) return <Navigate to="/login" replace />;
+  return allowedRoles.includes(user.role) ? children : <Navigate to="/dashboard" replace />;
 };
 
 function App() {
@@ -72,14 +63,15 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <Routes>
-            {/* Public Landing & Standalone Neobank */}
+            {/* 1. BEAUTIFUL LANDING PAGE (Application Start & Post-Logout Landing) */}
             <Route element={<PublicLayout />}>
               <Route path="/" element={<Landing />} />
             </Route>
 
+            {/* Standalone Neobank Route */}
             <Route path="/neobank" element={<Neobank />} />
 
-            {/* Auth Pages */}
+            {/* 2. AUTHENTICATION PAGES (Sign In & Create Account Forms) */}
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
@@ -91,7 +83,7 @@ function App() {
             {/* Identity Verification Page (Full Width Standalone) */}
             <Route path="/verify-identity" element={<IdentityVerification />} />
 
-            {/* Dashboard Routes */}
+            {/* 3. PROTECTED DASHBOARD ROUTES (Product Dashboard) */}
             <Route element={<DashboardLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/documents" element={<Documents />} />
@@ -118,17 +110,19 @@ function App() {
             toastOptions={{
               duration: 4000,
               style: {
-                background: 'rgba(30, 41, 59, 0.9)',
-                color: '#f1f5f9',
-                border: '1px solid rgba(148, 163, 184, 0.1)',
-                backdropFilter: 'blur(12px)',
-                borderRadius: '12px',
+                background: '#FFFFFF',
+                color: '#2E2A26',
+                border: '1px solid #E8E2DA',
+                boxShadow: '0 4px 12px 0 rgba(46, 42, 38, 0.10)',
+                borderRadius: '14px',
+                fontSize: '13px',
+                fontWeight: '500',
               },
               success: {
-                iconTheme: { primary: '#10b981', secondary: '#f1f5f9' },
+                iconTheme: { primary: '#2D6A4F', secondary: '#FFFFFF' },
               },
               error: {
-                iconTheme: { primary: '#f43f5e', secondary: '#f1f5f9' },
+                iconTheme: { primary: '#DC2626', secondary: '#FFFFFF' },
               },
             }}
           />

@@ -17,16 +17,13 @@ const Input = ({
 }) => {
   const inputId = id || name;
 
-  // Handle both: icon={HiOutlineEnvelope} (component ref) and icon={<HiOutlineEnvelope />} (JSX element)
   const renderIcon = () => {
     if (!icon) return null;
     if (React.isValidElement(icon)) {
-      // JSX element passed directly — clone it with the correct class
-      return React.cloneElement(icon, { className: 'h-5 w-5 text-slate-400' });
+      return React.cloneElement(icon, { className: 'h-4 w-4 text-[#7B746E]' });
     }
-    // Component reference passed — render it
     const Icon = icon;
-    return <Icon className="h-5 w-5 text-slate-400" />;
+    return <Icon className="h-4 w-4 text-[#7B746E]" />;
   };
 
   const hasIcon = !!icon;
@@ -34,13 +31,13 @@ const Input = ({
   return (
     <div className={`w-full ${className}`}>
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-          {label} {required && <span className="text-rose-500">*</span>}
+        <label htmlFor={inputId} className="block text-xs font-semibold text-[#2E2A26] mb-1.5 uppercase tracking-wider">
+          {label} {required && <span className="text-[#DC2626]">*</span>}
         </label>
       )}
       <div className="relative">
         {hasIcon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             {renderIcon()}
           </div>
         )}
@@ -53,21 +50,18 @@ const Input = ({
           disabled={disabled}
           placeholder={placeholder}
           className={`
-            block w-full rounded-lg sm:text-sm transition-colors duration-200
-            ${hasIcon ? 'pl-10' : 'pl-3'} pr-3 py-2.5
-            bg-white dark:bg-slate-900 
-            border ${error ? 'border-rose-500 focus:ring-rose-500 focus:border-rose-500' : 'border-slate-300 dark:border-slate-700 focus:ring-primary-500 focus:border-primary-500'}
-            text-slate-900 dark:text-white
-            placeholder-slate-400 dark:placeholder-slate-500
-            focus:outline-none focus:ring-2 focus:ring-opacity-50
-            disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200
-            dark:disabled:bg-slate-800 dark:disabled:text-slate-400 dark:disabled:border-slate-700
+            block w-full rounded-xl text-sm transition-all duration-150
+            ${hasIcon ? 'pl-10' : 'pl-3.5'} pr-3.5 py-2.5
+            bg-white text-[#2E2A26] placeholder-[#7B746E]/60
+            border ${error ? 'border-[#DC2626] focus:ring-[#DC2626]/20' : 'border-[#E8E2DA] focus:border-[#2D6A4F] focus:ring-2 focus:ring-[#2D6A4F]/15'}
+            focus:outline-none shadow-sm
+            disabled:bg-[#F6F3EE] disabled:text-[#7B746E] disabled:cursor-not-allowed
           `}
           {...props}
         />
       </div>
       {error && (
-        <p className="mt-1.5 text-sm text-rose-500">{error}</p>
+        <p className="mt-1.5 text-xs font-medium text-[#DC2626]">{error}</p>
       )}
     </div>
   );

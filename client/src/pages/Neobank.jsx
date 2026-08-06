@@ -59,15 +59,15 @@ export default function Neobank() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-      <div className="text-center max-w-lg mb-2">
-        <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center justify-center gap-2">
+    <div className="min-h-screen bg-[#FAF8F4] flex flex-col items-center justify-center p-4 text-[#2E2A26]">
+      <div className="text-center max-w-lg mb-4">
+        <h1 className="font-display text-2xl font-bold text-[#2E2A26] tracking-tight flex items-center justify-center gap-2">
           <span>Polygon Open Money Stack</span>
-          <span className="px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-xs font-mono border border-primary-400/30">
+          <span className="px-2.5 py-0.5 rounded-full bg-[#F0FAF5] text-[#2D6A4F] text-xs font-mono border border-[#B3E4CC]">
             v0.11 Sandbox
           </span>
         </h1>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-[#7B746E] mt-1 font-medium">
           Interactive Neobank • Custodial USDC Wallets • In-Person Cash-In • Instant P2P Transfers
         </p>
       </div>
@@ -77,9 +77,9 @@ export default function Neobank() {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, x: 10 }}
+            initial={{ opacity: 0, x: 8 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
+            exit={{ opacity: 0, x: -8 }}
             transition={{ duration: 0.2 }}
             className="flex-1"
           >

@@ -1,39 +1,59 @@
 import React from 'react';
-import { HiOutlineMenu, HiOutlineSearch, HiSun, HiMoon } from 'react-icons/hi';
-import { useTheme } from '../../hooks/useTheme';
+import { Menu, Search, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import NotificationBell from '../notifications/NotificationBell';
 
 const Header = ({ onMenuToggle }) => {
-  const { isDark, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   return (
-    <header className="h-16 bg-white/85 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 backdrop-blur-md sticky top-0 z-30 px-4 flex items-center justify-between shadow-sm dark:shadow-none">
-      <div className="flex items-center gap-4">
-        <button onClick={onMenuToggle} className="p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden">
-          <HiOutlineMenu className="w-5 h-5" />
+    <header className="h-16 bg-white border-b border-[#E8E2DA] sticky top-0 z-30 px-4 flex items-center justify-between shadow-xs">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuToggle}
+          className="p-2 -ml-2 rounded-lg text-[#55504B] hover:bg-[#F6F3EE] lg:hidden transition-colors"
+          aria-label="Toggle Menu"
+        >
+          <Menu className="w-5 h-5" />
         </button>
+
         <div className="relative hidden sm:block">
-          <HiOutlineSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7B746E]" />
           <input 
             type="text" 
             placeholder="Search documents..." 
-            className="pl-9 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-full text-sm focus:ring-2 focus:ring-primary-500 w-64 transition-all focus:w-80 outline-none text-slate-900 dark:text-white"
+            className="pl-9 pr-4 py-2 bg-[#F6F3EE] border border-[#E8E2DA] rounded-xl text-xs text-[#2E2A26] placeholder-[#7B746E] focus:bg-white focus:border-[#2D6A4F] focus:ring-2 focus:ring-[#2D6A4F]/15 w-48 sm:w-64 transition-all outline-none"
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-4">
-        <button onClick={toggleTheme} className="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          {isDark ? <HiSun className="w-5 h-5 text-amber-500" /> : <HiMoon className="w-5 h-5 text-indigo-500" />}
-        </button>
-        
+      <div className="flex items-center gap-2.5">
         <NotificationBell />
 
-        <div className="h-8 w-8 rounded-full gradient-primary flex items-center justify-center text-white font-medium cursor-pointer shadow-sm border-2 border-white dark:border-slate-800">
-          {user?.name?.charAt(0) || 'U'}
+        <div className="flex items-center gap-2 pl-2 border-l border-[#E8E2DA]">
+          <div className="h-8 w-8 rounded-lg bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+            {user?.name?.charAt(0) || 'U'}
+          </div>
+          <div className="hidden sm:block text-left">
+            <p className="text-xs font-semibold text-[#2E2A26] leading-tight">{user?.name || 'User'}</p>
+            <p className="text-[10px] text-[#7B746E] capitalize">{user?.role || 'Company'}</p>
+          </div>
         </div>
+
+        <button
+          onClick={handleLogout}
+          title="Log Out to Landing Page"
+          className="p-2 text-[#7B746E] hover:text-[#DC2626] hover:bg-[#FEF2F2] rounded-xl border border-[#E8E2DA] transition-all"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </header>
   );

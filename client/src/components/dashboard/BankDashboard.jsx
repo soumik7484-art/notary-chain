@@ -1,63 +1,108 @@
 import React from 'react';
-import DashboardLayout from './DashboardLayout';
-import { HiOutlineMagnifyingGlass, HiOutlineShieldExclamation, HiOutlineCheckBadge } from 'react-icons/hi2';
+import { Link } from 'react-router-dom';
+import { Search, ShieldAlert, CheckCircle2, Clock, Eye, FileText, ArrowUpRight } from 'lucide-react';
 
 const BankDashboard = () => {
   return (
-    <DashboardLayout title="Bank Verification Portal" subtitle="Review and verify incoming documents">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-600/20 to-violet-600/20 border border-indigo-500/20 backdrop-blur-xl">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-indigo-500/20 rounded-xl text-indigo-400"><HiOutlineMagnifyingGlass size={24}/></div>
-            <h3 className="text-lg font-medium text-white">Pending Requests</h3>
+    <div className="space-y-6">
+      {/* ── Page Header ── */}
+      <div>
+        <h1 className="text-[22px] font-bold text-[#2D2A27] tracking-tight">Bank Verification Portal</h1>
+        <p className="text-[13px] text-[#9B9490] mt-0.5">
+          Review, verify, and validate incoming institutional document requests
+        </p>
+      </div>
+
+      {/* ── Metric Cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Card 1 */}
+        <div className="p-5 bg-white border border-[#E9E4DD] rounded-xl shadow-xs hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#9B9490]">Pending Requests</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200">
+              <Clock className="w-4 h-4" />
+            </div>
           </div>
-          <p className="text-4xl font-bold text-white">24</p>
-          <p className="text-sm text-indigo-300 mt-2">12 High Priority</p>
+          <p className="text-3xl font-bold text-[#2D2A27] tracking-tight">24</p>
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50/80 px-2.5 py-1 rounded-md border border-amber-200/60 w-fit">
+            <span>12 High Priority</span>
+          </div>
         </div>
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/20 backdrop-blur-xl">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-400"><HiOutlineCheckBadge size={24}/></div>
-            <h3 className="text-lg font-medium text-white">Approved Today</h3>
+
+        {/* Card 2 */}
+        <div className="p-5 bg-white border border-[#E9E4DD] rounded-xl shadow-xs hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#9B9490]">Approved Today</span>
+            <div className="w-8 h-8 rounded-lg bg-[#F0FAF5] text-[#2D6A4F] flex items-center justify-center border border-[#C3DDD0]">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
           </div>
-          <p className="text-4xl font-bold text-white">15</p>
-          <p className="text-sm text-emerald-300 mt-2">+5 from yesterday</p>
+          <p className="text-3xl font-bold text-[#2D2A27] tracking-tight">15</p>
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-[#2D6A4F] bg-[#F0FAF5] px-2.5 py-1 rounded-md border border-[#C3DDD0] w-fit">
+            <span>+5 from yesterday</span>
+          </div>
         </div>
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-rose-600/20 to-red-600/20 border border-rose-500/20 backdrop-blur-xl">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-rose-500/20 rounded-xl text-rose-400"><HiOutlineShieldExclamation size={24}/></div>
-            <h3 className="text-lg font-medium text-white">Fraud Alerts</h3>
+
+        {/* Card 3 */}
+        <div className="p-5 bg-white border border-[#E9E4DD] rounded-xl shadow-xs hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#9B9490]">Fraud Alerts</span>
+            <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-200">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
           </div>
-          <p className="text-4xl font-bold text-white">2</p>
-          <p className="text-sm text-rose-300 mt-2">Requires immediate attention</p>
+          <p className="text-3xl font-bold text-[#2D2A27] tracking-tight">2</p>
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 px-2.5 py-1 rounded-md border border-red-200 w-fit">
+            <span>Requires immediate attention</span>
+          </div>
         </div>
       </div>
 
-      <div className="bg-slate-800/50 border border-slate-700/50 backdrop-blur-xl rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-6">Verification Queue</h3>
+      {/* ── Verification Queue Table ── */}
+      <div className="bg-white border border-[#E9E4DD] rounded-xl overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-[#E9E4DD] flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-[#2D2A27]">Verification Queue</h3>
+            <p className="text-[11px] text-[#9B9490]">Active compliance review requests</p>
+          </div>
+          <span className="text-xs font-semibold text-[#2D6A4F] bg-[#F0FAF5] px-2.5 py-1 rounded-full border border-[#C3DDD0]">
+            3 Action Required
+          </span>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="text-slate-400 border-b border-slate-700">
-                <th className="pb-3 font-medium">Document ID</th>
-                <th className="pb-3 font-medium">Company</th>
-                <th className="pb-3 font-medium">Type</th>
-                <th className="pb-3 font-medium">Risk Score</th>
-                <th className="pb-3 font-medium">Action</th>
+              <tr className="bg-[#FAF8F4] border-b border-[#E9E4DD] text-[11px] font-bold text-[#7B746E] uppercase tracking-wider">
+                <th className="py-3 px-4">Document ID</th>
+                <th className="py-3 px-4">Company</th>
+                <th className="py-3 px-4">Type</th>
+                <th className="py-3 px-4">Risk Score</th>
+                <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#E9E4DD] text-xs">
               {[
-                { id: 'DOC-8492', company: 'Acme Corp', type: 'Financial Statement', risk: 'Low', rColor: 'text-emerald-400' },
-                { id: 'DOC-1123', company: 'Global Tech LLC', type: 'Proof of Address', risk: 'High', rColor: 'text-rose-400' },
-                { id: 'DOC-5591', company: 'Stark Industries', type: 'Identity Verification', risk: 'Medium', rColor: 'text-amber-400' },
-              ].map((row, i) => (
-                <tr key={i} className="border-b border-slate-700/50 last:border-0 hover:bg-slate-700/20 transition-colors">
-                  <td className="py-4 text-white font-medium">{row.id}</td>
-                  <td className="py-4 text-slate-300">{row.company}</td>
-                  <td className="py-4 text-slate-300">{row.type}</td>
-                  <td className={`py-4 ${row.rColor} font-medium`}>{row.risk}</td>
-                  <td className="py-4">
-                    <button className="px-4 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-sm transition-colors border border-indigo-500/20">Review</button>
+                { id: 'DOC-8492', company: 'Acme Corp', type: 'Financial Statement', risk: 'Low', riskBg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                { id: 'DOC-1123', company: 'Global Tech LLC', type: 'Proof of Address', risk: 'High', riskBg: 'bg-red-50 text-red-700 border-red-200' },
+                { id: 'DOC-5591', company: 'Stark Industries', type: 'Identity Verification', risk: 'Medium', riskBg: 'bg-amber-50 text-amber-700 border-amber-200' },
+              ].map((row) => (
+                <tr key={row.id} className="hover:bg-[#FAF8F4] transition-colors">
+                  <td className="py-3.5 px-4 font-bold text-[#2D2A27]">{row.id}</td>
+                  <td className="py-3.5 px-4 font-medium text-[#55504B]">{row.company}</td>
+                  <td className="py-3.5 px-4 text-[#7B746E]">{row.type}</td>
+                  <td className="py-3.5 px-4">
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${row.riskBg}`}>
+                      {row.risk}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4 text-right">
+                    <Link
+                      to={`/documents/${row.id}`}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#2D6A4F] hover:bg-[#245741] text-white rounded-lg text-xs font-semibold transition-colors shadow-xs"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Review
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -65,7 +110,7 @@ const BankDashboard = () => {
           </table>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 };
 

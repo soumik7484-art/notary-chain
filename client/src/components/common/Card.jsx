@@ -12,8 +12,8 @@ const Card = ({
   const Component = onClick || hover ? motion.div : 'div';
   
   const hoverProps = (onClick || hover) ? {
-    whileHover: { y: -4, transition: { duration: 0.2 } },
-    className: 'cursor-pointer hover:shadow-xl dark:hover:shadow-primary-900/20'
+    whileHover: { y: -2, transition: { duration: 0.15 } },
+    className: 'cursor-pointer hover:shadow-card-hover hover:border-[#D4CECA]'
   } : {};
 
   return (
@@ -22,16 +22,15 @@ const Card = ({
       {...hoverProps}
       className={`
         relative overflow-hidden rounded-2xl
-        glass-dark dark:glass-dark bg-white/70 dark:bg-slate-800/70
-        border border-slate-200 dark:border-white/10
-        shadow-sm backdrop-blur-xl
+        bg-white border border-[#E8E2DA]
+        shadow-card transition-all duration-200
         ${padding}
         ${hoverProps.className || ''}
         ${className}
       `}
     >
       {gradient && (
-        <div className="absolute top-0 left-0 right-0 h-1 gradient-primary" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#2D6A4F] to-[#52796F]" />
       )}
       {children}
     </Component>

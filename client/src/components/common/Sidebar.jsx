@@ -1,84 +1,182 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HiOutlineHome, HiOutlineDocumentText, HiOutlineBadgeCheck, HiOutlineUser, HiOutlineCog, HiOutlineUsers, HiOutlineChartPie, HiOutlineClipboardList, HiOutlineCreditCard } from 'react-icons/hi';
-import { HiOutlineCpuChip } from 'react-icons/hi2';
-
+import {
+  LayoutDashboard, CreditCard, ShieldCheck, FileText,
+  History, BarChart3, Wallet, Settings, ChevronLeft,
+  ChevronRight, X, LogOut, Activity
+} from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { SIDEBAR_MENUS, ROLES } from '../../utils/constants';
 
-const iconMap = {
-  FiHome:       HiOutlineHome,
-  FiCreditCard: HiOutlineCreditCard,
-  FiFileText:   HiOutlineDocumentText,
-  FiCheckCircle:HiOutlineBadgeCheck,
-  FiUser:       HiOutlineUser,
-  FiSettings:   HiOutlineCog,
-  FiUsers:      HiOutlineUsers,
-  FiPieChart:   HiOutlineChartPie,
-  FiActivity:   HiOutlineClipboardList,
-  FiHexagon:    HiOutlineCpuChip,
+const NAV_ITEMS = [
+  { label: 'Dashboard',     path: '/dashboard',         icon: LayoutDashboard, group: 'main' },
+  { label: 'Neobank',       path: '/neobank',            icon: CreditCard,      group: 'main' },
+  { label: 'Verification',  path: '/verifications',      icon: ShieldCheck,     group: 'main' },
+  { label: 'Documents',     path: '/documents',          icon: FileText,        group: 'main' },
+  { label: 'History',       path: '/admin/audit',        icon: History,         group: 'records' },
+  { label: 'Analytics',     path: '/admin/analytics',    icon: BarChart3,       group: 'records' },
+  { label: 'Wallet Health', path: '/blockchain-health',  icon: Activity,        group: 'records' },
+  { label: 'Wallet',        path: '/neobank',            icon: Wallet,          group: 'account' },
+  { label: 'Settings',      path: '/settings',           icon: Settings,        group: 'account' },
+];
+
+const GROUP_LABELS = {
+  main: null,
+  records: 'Records',
+  account: 'Account',
 };
 
+const Sidebar = ({ collapsed, onToggle, isMobileDrawer = false }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-const Sidebar = ({ collapsed, onToggle }) => {
-  const { user } = useAuth();
-  const menuItems = user?.role === ROLES.ADMIN ? SIDEBAR_MENUS[ROLES.ADMIN] : SIDEBAR_MENUS.DEFAULT;
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
+  const groups = [...new Set(NAV_ITEMS.map((i) => i.group))];
 
   return (
     <motion.aside
       initial={false}
-      animate={{ width: collapsed ? 80 : 260 }}
-      className="h-screen sticky top-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 z-40"
+      animate={{ width: collapsed && !isMobileDrawer ? 72 : 240 }}
+      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+      className="h-screen sticky top-0 flex flex-col bg-white border-r border-[#E9E4DD] overflow-hidden z-40 shrink-0"
     >
-      <div className="h-16 flex items-center justify-center border-b border-slate-200 dark:border-slate-800 shrink-0 px-4">
-        {collapsed ? (
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center font-bold text-white">N</div>
-        ) : (
-          <div className="flex items-center gap-2 w-full">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center font-bold text-white shrink-0">N</div>
-            <span className="font-display font-bold text-lg text-slate-900 dark:text-white tracking-wide truncate">NotaryChain</span>
+      {/* ── Logo ── */}
+      <div className="h-[57px] flex items-center justify-between px-4 border-b border-[#E9E4DD] shrink-0">
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <div className="w-8 h-8 rounded-lg bg-[#2D6A4F] flex items-center justify-center shrink-0 shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-white" strokeWidth={2.5} />
           </div>
+          {(!collapsed || isMobileDrawer) && (
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="font-semibold text-[15px] text-[#2D2A27] tracking-tight whitespace-nowrap overflow-hidden"
+            >
+              NotaryChain
+            </motion.span>
+          )}
+        </div>
+        {isMobileDrawer ? (
+          <button
+            onClick={onToggle}
+            className="p-1.5 rounded-lg text-[#7B746E] hover:bg-[#F6F3EE] hover:text-[#2D2A27] transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            onClick={onToggle}
+            className="p-1.5 rounded-lg text-[#7B746E] hover:bg-[#F6F3EE] hover:text-[#2D2A27] transition-colors hidden lg:flex"
+          >
+            {collapsed ? (
+              <ChevronRight className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronLeft className="w-3.5 h-3.5" />
+            )}
+          </button>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto py-6 px-3 flex flex-col gap-1">
-        {menuItems.map((item) => {
-          const Icon = iconMap[item.icon] || HiOutlineHome;
+      {/* ── Navigation ── */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+        {groups.map((group) => {
+          const items = NAV_ITEMS.filter((i) => i.group === group);
+          const label = GROUP_LABELS[group];
+
           return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative
-                ${isActive ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-semibold' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white text-slate-500 dark:text-slate-400'}
-                ${collapsed ? 'justify-center' : ''}
-              `}
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive && <motion.div layoutId="activeNav" className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500 rounded-r-full" />}
-                  <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white'}`} />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                </>
+            <div key={group} className="mb-1">
+              {label && (!collapsed || isMobileDrawer) && (
+                <p className="px-3 py-1.5 text-[10px] font-semibold tracking-widest uppercase text-[#AAA49F] select-none">
+                  {label}
+                </p>
               )}
-            </NavLink>
+              {label && (collapsed && !isMobileDrawer) && (
+                <div className="h-px bg-[#E9E4DD] mx-2 my-2" />
+              )}
+              {items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.label + item.path}
+                    to={item.path}
+                    title={collapsed && !isMobileDrawer ? item.label : undefined}
+                    className={({ isActive }) =>
+                      `relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 group
+                      ${isActive
+                        ? 'bg-[#F0FAF5] text-[#2D6A4F]'
+                        : 'text-[#55504B] hover:bg-[#F6F3EE] hover:text-[#2D2A27]'
+                      }
+                      ${collapsed && !isMobileDrawer ? 'justify-center' : ''}
+                      `
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <motion.div
+                            layoutId="sidebarActiveIndicator"
+                            className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[#2D6A4F] rounded-r-full"
+                          />
+                        )}
+                        <Icon
+                          className={`w-4 h-4 shrink-0 transition-colors ${
+                            isActive ? 'text-[#2D6A4F]' : 'text-[#9B9490] group-hover:text-[#2D2A27]'
+                          }`}
+                          strokeWidth={isActive ? 2.5 : 2}
+                        />
+                        {(!collapsed || isMobileDrawer) && (
+                          <span className="truncate">{item.label}</span>
+                        )}
+                        {/* Tooltip for collapsed state */}
+                        {collapsed && !isMobileDrawer && (
+                          <div className="absolute left-full ml-2 px-2 py-1 bg-[#2D2A27] text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
+                            {item.label}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
           );
         })}
-      </div>
+      </nav>
 
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} bg-slate-100 dark:bg-slate-800/50 rounded-xl p-2`}>
-          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0 text-sm font-semibold text-slate-700 dark:text-slate-300">
+      {/* ── User Footer ── */}
+      <div className="border-t border-[#E9E4DD] p-3 shrink-0 space-y-1">
+        {/* User info */}
+        <div
+          className={`flex items-center gap-2.5 px-2 py-2 rounded-lg ${
+            collapsed && !isMobileDrawer ? 'justify-center' : ''
+          }`}
+        >
+          <div className="w-7 h-7 rounded-md bg-[#2D6A4F] text-white flex items-center justify-center shrink-0 text-[11px] font-bold uppercase">
             {user?.name?.charAt(0) || 'U'}
           </div>
-          {!collapsed && (
-            <div className="overflow-hidden">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.role || 'Company'}</p>
+          {(!collapsed || isMobileDrawer) && (
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-semibold text-[#2D2A27] truncate">{user?.name || 'User'}</p>
+              <p className="text-[11px] text-[#9B9490] capitalize truncate">{user?.role || 'Company'}</p>
             </div>
           )}
         </div>
+
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          title={collapsed && !isMobileDrawer ? 'Log out' : undefined}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[#7B746E] hover:bg-[#FEF2F2] hover:text-[#DC2626] transition-all group ${
+            collapsed && !isMobileDrawer ? 'justify-center' : ''
+          }`}
+        >
+          <LogOut className="w-4 h-4 shrink-0 group-hover:text-[#DC2626] transition-colors" strokeWidth={2} />
+          {(!collapsed || isMobileDrawer) && <span>Log out</span>}
+        </button>
       </div>
     </motion.aside>
   );

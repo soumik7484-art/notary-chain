@@ -3,7 +3,6 @@ import axiosInstance from '../api/axios';
 import { auth, googleProvider, IS_CONFIGURED } from '../config/firebase';
 import { signInWithPopup } from 'firebase/auth';
 
-
 export const AuthContext = createContext();
 
 const DEMO_USER = {
@@ -17,17 +16,14 @@ const DEMO_USER = {
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
 };
 
-// Helper: pull the nested data object from our API response shape { success, data: { user, tokens } }
 const extract = (res) => res?.data?.data ?? res?.data ?? {};
 
 export const AuthProvider = ({ children }) => {
-  // Start as null so we know "not yet determined"
   const [user, setUser]       = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const isAuthenticated = !!user;
 
-  // On mount: restore session from localStorage token
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('accessToken');
@@ -36,15 +32,13 @@ export const AuthProvider = ({ children }) => {
           const res = await axiosInstance.get('/auth/me');
           const payload = extract(res);
           if (payload) setUser(payload);
-          else setUser(DEMO_USER); // server returned ok but no user obj
+          else setUser(DEMO_USER);
         } catch {
-          // Token invalid / expired — clear and show login
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           setUser(null);
         }
       } else if (token === 'demo-token') {
-        // Demo session persisted
         setUser(DEMO_USER);
       } else {
         setUser(null);
@@ -74,14 +68,12 @@ export const AuthProvider = ({ children }) => {
       setUser(loggedInUser);
       return payload;
     } catch (err) {
-      // Only use demo fallback for network errors (no response), not auth failures
       if (!err.response) {
         localStorage.setItem('accessToken', 'demo-token');
         const demoAccount = { ...DEMO_USER, email };
         setUser(demoAccount);
         return { user: demoAccount };
       }
-      // Real auth error (401 wrong password, 422 validation) — throw so UI shows message
       const msg = err.response?.data?.message || 'Invalid email or password';
       throw new Error(msg);
     }
@@ -112,7 +104,6 @@ export const AuthProvider = ({ children }) => {
       return payload;
     } catch (err) {
       if (!err.response) {
-        // Network error — use demo
         localStorage.setItem('accessToken', 'demo-token');
         const newUser = { ...DEMO_USER, ...formData, name: `${formData.firstName} ${formData.lastName}` };
         setUser(newUser);
@@ -147,26 +138,23 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const loginWithGoogle = useCallback(async () => {
-    // Guard: Firebase not configured yet
+  const loginWithGoogle = useCallback(async (mode = 'login') => {
     if (!IS_CONFIGURED || !auth || !googleProvider) {
       throw new Error(
         'Google Sign-In is not configured yet. Add your VITE_FIREBASE_API_KEY to .env and restart the dev server.'
       );
     }
 
-    // Open the Google popup via Firebase
     const result = await signInWithPopup(auth, googleProvider);
     const idToken = await result.user.getIdToken();
 
-    // Call /auth/google/init to verify profile & get temp token for identity verification
-    const res = await axiosInstance.post('/auth/google/init', { idToken });
+    const res = await axiosInstance.post('/auth/google/init', { idToken, mode });
     const payload = extract(res);
 
-    // Save temporary session in sessionStorage (resets if page is closed without completing)
     sessionStorage.setItem('pending_google_auth', JSON.stringify({
       tempToken: payload.tempToken,
-      user: payload.user
+      user: payload.user,
+      mode: mode || payload.mode || 'login'
     }));
 
     return payload;
@@ -180,4 +168,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-

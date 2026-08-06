@@ -1,83 +1,566 @@
-import React from 'react';
-import DashboardLayout from './DashboardLayout';
-import { HiOutlineDocumentPlus, HiOutlineCheckCircle, HiOutlineClock, HiOutlineShare } from 'react-icons/hi2';
-import Button from '../common/Button';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Upload, Plus, Search, FileText, ShieldCheck, Clock,
+  ArrowUpRight, ArrowDownLeft, CheckCircle2, XCircle,
+  RefreshCw, ExternalLink, Zap, Activity, BarChart3,
+  TrendingUp, AlertCircle, ChevronRight, LayoutGrid, CreditCard, HeartPulse
+} from 'lucide-react';
+import DocumentUpload from '../documents/DocumentUpload';
+import InteractiveNeobankPhone from '../neobank/InteractiveNeobankPhone';
+import { useAuth } from '../../hooks/useAuth';
+import { getDocumentList } from '../../api/documentApi';
+
+/* ─── Tiny helpers ─────────────────────────────────────── */
+
+const statusConfig = {
+  verified:   { label: 'Verified',   bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  approved:   { label: 'Approved',   bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  notarized:  { label: 'Notarized',  bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  pending:    { label: 'Pending',    bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-400'  },
+  pending_verification: { label: 'Pending', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  under_review: { label: 'In Review', bg: 'bg-blue-50',  text: 'text-blue-700',    dot: 'bg-blue-500'   },
+  rejected:   { label: 'Rejected',   bg: 'bg-red-50',    text: 'text-red-700',     dot: 'bg-red-500'    },
+  draft:      { label: 'Draft',      bg: 'bg-[#F6F3EE]', text: 'text-[#7B746E]',   dot: 'bg-[#9B9490]'  },
+};
+
+const StatusPill = ({ status }) => {
+  const s = statusConfig[status?.toLowerCase()] || statusConfig.draft;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${s.bg} ${s.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot} shrink-0`} />
+      {s.label}
+    </span>
+  );
+};
+
+const StatCard = ({ label, value, sub, icon: Icon, iconColor, trend, onClick }) => (
+  <div
+    onClick={onClick}
+    className="bg-white border border-[#E9E4DD] rounded-xl p-4 flex flex-col gap-3 hover:shadow-md transition-all cursor-pointer group"
+  >
+    <div className="flex items-center justify-between">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-[#9B9490]">{label}</span>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconColor} group-hover:scale-105 transition-transform`}>
+        <Icon className="w-4 h-4" />
+      </div>
+    </div>
+    <div>
+      <p className="text-2xl font-bold text-[#2D2A27] tracking-tight">{value}</p>
+      {sub && <p className="text-[11px] text-[#9B9490] mt-0.5">{sub}</p>}
+    </div>
+    {trend && (
+      <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
+        <TrendingUp className="w-3 h-3" />
+        {trend}
+      </div>
+    )}
+  </div>
+);
+
+const FILTER_TABS = ['all', 'verified', 'pending', 'rejected'];
+
+const SECTION_TABS = [
+  { id: 'overview',     label: 'Overview',         icon: LayoutGrid },
+  { id: 'neobank',      label: 'Polygon Neobank',  icon: CreditCard },
+  { id: 'verification', label: 'Verification Vault', icon: ShieldCheck },
+  { id: 'wallethealth', label: 'Wallet Health',    icon: HeartPulse },
+  { id: 'all',          label: 'Split View',       icon: Activity },
+];
+
+/* ─── Main Dashboard ────────────────────────────────────── */
 
 const CompanyDashboard = () => {
+  const { user } = useAuth();
+  const [activeSection, setActiveSection] = useState('overview');
+  const [isUploadOpen, setUploadOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [documents, setDocuments] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(true);
+  const [blockchainStatus] = useState({ healthy: true, checks: '19/19', latency: '2.1s' });
+
+  /* Fetch documents */
+  const fetchDocs = useCallback(async () => {
+    try {
+      setDocsLoading(true);
+      const res = await getDocumentList();
+      const data = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      setDocuments(data);
+    } catch {
+      setDocuments([]);
+    } finally {
+      setDocsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchDocs(); }, [fetchDocs]);
+
+  const onUploadSuccess = () => {
+    setUploadOpen(false);
+    fetchDocs();
+  };
+
+  /* Derived counts */
+  const verifiedCount = documents.filter(d =>
+    ['verified', 'approved', 'notarized'].includes(d.status?.toLowerCase())
+  ).length;
+  const pendingCount = documents.filter(d =>
+    ['pending', 'pending_verification', 'under_review'].includes(d.status?.toLowerCase())
+  ).length;
+
+  /* Filtered list */
+  const filteredDocs = documents.filter((doc) => {
+    const q = searchQuery.toLowerCase();
+    const matchSearch = !q || doc.fileName?.toLowerCase().includes(q) || doc._id?.toLowerCase().includes(q);
+    const matchStatus = statusFilter === 'all' || doc.status?.toLowerCase().includes(statusFilter);
+    return matchSearch && matchStatus;
+  });
+
   return (
-    <DashboardLayout 
-      title="Company Portal" 
-      subtitle="Manage your documents and verifications"
-      actions={<Button className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-2 px-4 flex items-center gap-2"><HiOutlineDocumentPlus /> Upload New</Button>}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        {[
-          { title: 'My Documents', value: '42', icon: <HiOutlineDocumentPlus/>, color: 'text-indigo-500' },
-          { title: 'Verified', value: '28', icon: <HiOutlineCheckCircle/>, color: 'text-emerald-500' },
-          { title: 'Pending', value: '14', icon: <HiOutlineClock/>, color: 'text-amber-500' },
-          { title: 'Shared', value: '5', icon: <HiOutlineShare/>, color: 'text-blue-500' }
-        ].map((stat, i) => (
-          <div key={i} className="p-6 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 backdrop-blur-xl flex items-center gap-4 shadow-sm dark:shadow-none">
-            <div className={`p-4 rounded-xl bg-slate-100 dark:bg-slate-900/50 ${stat.color}`}>
-              {React.cloneElement(stat.icon, { className: 'w-8 h-8' })}
-            </div>
-            <div>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">{stat.title}</p>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</h3>
-            </div>
-          </div>
-        ))}
+    <div className="space-y-6">
+
+      {/* ── Page Header ── */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[22px] font-bold text-[#2D2A27] tracking-tight">
+            Welcome back, {user?.name?.split(' ')[0] || 'there'} 👋
+          </h1>
+          <p className="text-[13px] text-[#9B9490] mt-0.5">
+            Polygon Neobank · Blockchain Verification · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={fetchDocs}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E9E4DD] bg-white text-[12px] font-medium text-[#55504B] hover:bg-[#F6F3EE] hover:text-[#2D2A27] transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          <button
+            onClick={() => setUploadOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#2D6A4F] text-white text-[12px] font-semibold hover:bg-[#245741] transition-colors shadow-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Upload Document
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 p-6 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 backdrop-blur-xl shadow-sm dark:shadow-none">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Recent Documents</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
-                  <th className="pb-3 font-medium">Name</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium">Date</th>
-                  <th className="pb-3 font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { name: 'Q3 Financial Report.pdf', status: 'Verified', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20', date: '2 hours ago' },
-                  { name: 'Vendor Contract_V2.docx', status: 'Pending', color: 'text-amber-500 bg-amber-500/10 border-amber-500/20', date: 'Yesterday' },
-                  { name: 'Articles of Incorporation.pdf', status: 'Rejected', color: 'text-rose-500 bg-rose-500/10 border-rose-500/20', date: 'Oct 12, 2023' }
-                ].map((doc, i) => (
-                  <tr key={i} className="border-b border-slate-200/50 dark:border-slate-700/50 last:border-0">
-                    <td className="py-4 text-slate-900 dark:text-white font-medium">{doc.name}</td>
-                    <td className="py-4">
-                      <span className={`px-2 py-1 rounded-md text-xs border ${doc.color}`}>{doc.status}</span>
-                    </td>
-                    <td className="py-4 text-slate-500 dark:text-slate-400 text-sm">{doc.date}</td>
-                    <td className="py-4 text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 cursor-pointer text-sm font-semibold">View</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 backdrop-blur-xl shadow-sm dark:shadow-none flex flex-col">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Profile Completion</h3>
-          <div className="flex-1 flex flex-col justify-center">
-            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-2">
-              <div className="bg-gradient-to-r from-indigo-500 to-violet-500 h-2 rounded-full" style={{ width: '80%' }}></div>
-            </div>
-            <p className="text-right text-sm text-indigo-600 dark:text-indigo-400 font-semibold">80% Complete</p>
-            <ul className="mt-6 space-y-3 text-sm text-slate-600 dark:text-slate-300">
-              <li className="flex items-center gap-2 text-emerald-500"><HiOutlineCheckCircle /> Email Verified</li>
-              <li className="flex items-center gap-2 text-emerald-500"><HiOutlineCheckCircle /> Company Details Added</li>
-              <li className="flex items-center gap-2 text-slate-400"><div className="w-4 h-4 rounded-full border border-slate-400" /> Identity Verification Pending</li>
-            </ul>
-          </div>
-        </div>
+      {/* ── Divided Section Selector Bar (Clean Segmented Tabs) ── */}
+      <div className="bg-white border border-[#E9E4DD] p-1.5 rounded-xl shadow-xs flex items-center gap-1 overflow-x-auto">
+        {SECTION_TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeSection === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSection(tab.id)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                isActive
+                  ? 'bg-[#2D6A4F] text-white shadow-xs'
+                  : 'text-[#55504B] hover:bg-[#F6F3EE] hover:text-[#2D2A27]'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
-    </DashboardLayout>
+
+      {/* ── Section 1: Executive Stat Cards (Always Visible) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Wallet Balance"
+          value="Live"
+          sub="Fetched from Neobank API"
+          icon={Zap}
+          iconColor="bg-[#F0FAF5] text-[#2D6A4F]"
+          onClick={() => setActiveSection('neobank')}
+        />
+        <StatCard
+          label="Verified Today"
+          value={verifiedCount}
+          sub={`${verifiedCount} of ${documents.length} total`}
+          icon={CheckCircle2}
+          iconColor="bg-emerald-50 text-emerald-600"
+          trend={verifiedCount > 0 ? `${verifiedCount} sealed on-chain` : undefined}
+          onClick={() => setActiveSection('verification')}
+        />
+        <StatCard
+          label="Pending"
+          value={pendingCount}
+          sub="Awaiting notary approval"
+          icon={Clock}
+          iconColor="bg-amber-50 text-amber-600"
+          onClick={() => setActiveSection('verification')}
+        />
+        <StatCard
+          label="Wallet Health"
+          value={blockchainStatus.healthy ? 'Healthy' : 'Degraded'}
+          sub={`${blockchainStatus.checks} checks · ${blockchainStatus.latency} latency`}
+          icon={Activity}
+          iconColor={blockchainStatus.healthy ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}
+          onClick={() => setActiveSection('wallethealth')}
+        />
+      </div>
+
+      {/* ── DIVIDED FEATURE SECTIONS ── */}
+      <AnimatePresence mode="wait">
+
+        {/* SECTION A: OVERVIEW & ACTIVITY */}
+        {(activeSection === 'overview') && (
+          <motion.div
+            key="overview-section"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-6"
+          >
+            {/* Features Toolbar & Quick Action Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div
+                onClick={() => setActiveSection('neobank')}
+                className="p-4 bg-white border border-[#E9E4DD] rounded-xl hover:border-[#2D6A4F] cursor-pointer transition-all flex items-center justify-between group shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#F0FAF5] text-[#2D6A4F] flex items-center justify-center font-bold">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[#2D2A27]">Polygon Neobank</h3>
+                    <p className="text-[11px] text-[#9B9490]">P2P Transfers, Cash-In, Payouts</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#9B9490] group-hover:translate-x-1 transition-transform" />
+              </div>
+
+              <div
+                onClick={() => setActiveSection('verification')}
+                className="p-4 bg-white border border-[#E9E4DD] rounded-xl hover:border-[#2D6A4F] cursor-pointer transition-all flex items-center justify-between group shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#F0FAF5] text-[#2D6A4F] flex items-center justify-center font-bold">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[#2D2A27]">Verification Vault</h3>
+                    <p className="text-[11px] text-[#9B9490]">{documents.length} Cryptographic Documents</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#9B9490] group-hover:translate-x-1 transition-transform" />
+              </div>
+
+              <div
+                onClick={() => setActiveSection('wallethealth')}
+                className="p-4 bg-white border border-[#E9E4DD] rounded-xl hover:border-[#2D6A4F] cursor-pointer transition-all flex items-center justify-between group shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#F0FAF5] text-[#2D6A4F] flex items-center justify-center font-bold">
+                    <HeartPulse className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[#2D2A27]">Wallet Health</h3>
+                    <p className="text-[11px] text-[#9B9490]">Polygon Amoy Network Status</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#9B9490] group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Overview Activity & Timeline Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              {/* Recent Activity Feed */}
+              <div className="bg-white border border-[#E9E4DD] rounded-xl p-5 shadow-xs">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#E9E4DD]">
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#9B9490]">Live Activity Stream</h3>
+                  <Activity className="w-4 h-4 text-[#9B9490]" />
+                </div>
+                <div className="space-y-3.5">
+                  {[
+                    { icon: '💸', title: 'P2P Transfer Executed', desc: 'Sent 150 USDC to @ada.polygon', time: '2m ago' },
+                    { icon: '📄', title: 'Document Anchored', desc: 'Q3 Financial Report sealed on Polygon', time: '1h ago' },
+                    { icon: '🔐', title: 'Identity Verified', desc: 'Google OAuth & Face Biometrics', time: '3h ago' },
+                    { icon: '💰', title: 'Cash Top-Up Barcode', desc: 'Generated 7-Eleven deposit code', time: 'Yesterday' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#FAF8F4] border border-[#E9E4DD] flex items-center justify-center text-[15px] shrink-0">
+                        {item.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold text-[#2D2A27] truncate">{item.title}</p>
+                        <p className="text-[11px] text-[#9B9490] truncate">{item.desc}</p>
+                      </div>
+                      <span className="text-[10px] font-semibold text-[#AAA49F] whitespace-nowrap">{item.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Document Timeline */}
+              <div className="bg-white border border-[#E9E4DD] rounded-xl p-5 shadow-xs">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#E9E4DD]">
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#9B9490]">Audit Trail Timeline</h3>
+                  <BarChart3 className="w-4 h-4 text-[#9B9490]" />
+                </div>
+                {documents.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-8 text-center">
+                    <FileText className="w-8 h-8 text-[#D4CECA]" />
+                    <p className="text-[12px] text-[#9B9490]">No document audit records yet</p>
+                    <button
+                      onClick={() => setUploadOpen(true)}
+                      className="text-[12px] text-[#2D6A4F] font-bold hover:underline"
+                    >
+                      Upload first doc →
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="absolute left-3.5 top-0 bottom-0 w-px bg-[#E9E4DD]" />
+                    <div className="space-y-4 pl-8">
+                      {documents.slice(0, 4).map((doc, i) => (
+                        <div key={doc._id || i} className="relative">
+                          <div className={`absolute -left-[22px] top-1 w-2.5 h-2.5 rounded-full border-2 border-white ${
+                            ['verified', 'approved', 'notarized'].includes(doc.status?.toLowerCase())
+                              ? 'bg-emerald-500'
+                              : ['rejected'].includes(doc.status?.toLowerCase())
+                              ? 'bg-red-400'
+                              : 'bg-amber-400'
+                          }`} />
+                          <p className="text-[12px] font-bold text-[#2D2A27] truncate">
+                            {doc.fileName || 'Untitled'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <StatusPill status={doc.status} />
+                            <span className="text-[10px] text-[#AAA49F]">
+                              {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+
+        {/* SECTION B: POLYGON NEOBANK WORKSPACE */}
+        {(activeSection === 'neobank') && (
+          <motion.div
+            key="neobank-section"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex flex-col items-center justify-center space-y-4 py-2"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-[#2D6A4F] animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-wider text-[#2D2A27]">
+                Polygon Neobank Feature Section
+              </span>
+              <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#F0FAF5] border border-[#C3DDD0] text-[#2D6A4F]">
+                Custodial Open Money Stack
+              </span>
+            </div>
+            <InteractiveNeobankPhone />
+          </motion.div>
+        )}
+
+        {/* SECTION C: VERIFICATION VAULT */}
+        {(activeSection === 'verification') && (
+          <motion.div
+            key="verification-section"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-4"
+          >
+            <div className="bg-white border border-[#E9E4DD] rounded-xl overflow-hidden shadow-xs">
+              <div className="p-4 border-b border-[#E9E4DD] flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[#2D2A27]">Verification Vault & Queue</h3>
+                  <p className="text-[11px] text-[#9B9490]">Cryptographically anchored documents on Polygon Amoy</p>
+                </div>
+                <button
+                  onClick={() => setUploadOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2D6A4F] text-white text-[12px] font-semibold hover:bg-[#245741] transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Upload Document
+                </button>
+              </div>
+
+              {/* Toolbar */}
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#FAF8F4] border-b border-[#E9E4DD]">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#AAA49F]" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search documents by name or SHA-256 hash…"
+                    className="w-full pl-8 pr-3 py-1.5 text-[12px] bg-white border border-[#E9E4DD] rounded-lg text-[#2D2A27] placeholder:text-[#AAA49F] focus:outline-none focus:border-[#2D6A4F]"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {FILTER_TABS.map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setStatusFilter(tab)}
+                      className={`px-3 py-1 rounded-md text-[11px] font-semibold capitalize transition-colors ${
+                        statusFilter === tab
+                          ? 'bg-[#2D6A4F] text-white'
+                          : 'text-[#7B746E] hover:bg-white'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Table */}
+              {docsLoading ? (
+                <div className="p-6 space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-12 rounded-lg animate-shimmer" />
+                  ))}
+                </div>
+              ) : filteredDocs.length === 0 ? (
+                <div className="p-10 flex flex-col items-center gap-3 text-center">
+                  <FileText className="w-8 h-8 text-[#9B9490]" />
+                  <p className="text-[13px] font-bold text-[#2D2A27]">No documents found</p>
+                  <button
+                    onClick={() => setUploadOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2D6A4F] text-white text-[12px] font-semibold hover:bg-[#245741] transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Upload Document
+                  </button>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#E9E4DD]">
+                  {filteredDocs.map((doc) => (
+                    <div key={doc._id} className="flex items-center gap-3 px-4 py-3 hover:bg-[#FAF8F4] transition-colors group">
+                      <div className="w-8 h-8 rounded-lg bg-[#F0FAF5] border border-[#C3DDD0] flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4 text-[#2D6A4F]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold text-[#2D2A27] truncate">
+                          {doc.fileName || doc.name || 'Untitled Document'}
+                        </p>
+                        <p className="text-[10px] text-[#9B9490] font-mono truncate mt-0.5">
+                          {doc.blockchainTxHash
+                            ? `Hash: ${doc.blockchainTxHash}`
+                            : `ID: ${doc._id}`
+                          }
+                        </p>
+                      </div>
+                      <StatusPill status={doc.status} />
+                      <Link
+                        to={`/documents/${doc._id}`}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-[#2D6A4F] hover:underline"
+                      >
+                        Inspect <ExternalLink className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* SECTION D: WALLET HEALTH & NETWORK MATRIX */}
+        {(activeSection === 'wallethealth') && (
+          <motion.div
+            key="wallethealth-section"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-6"
+          >
+            <div className="bg-white border border-[#E9E4DD] rounded-xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-[#E9E4DD] pb-4">
+                <div>
+                  <h3 className="text-base font-bold text-[#2D2A27]">Wallet Health & Network Matrix</h3>
+                  <p className="text-xs text-[#9B9490]">Polygon Amoy Testnet 19-Point Telemetry Status</p>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1 bg-[#F0FAF5] border border-[#C3DDD0] rounded-full text-[#2D6A4F] text-xs font-bold">
+                  <div className="w-2 h-2 rounded-full bg-[#2D6A4F] animate-pulse" />
+                  19/19 Passing
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                {[
+                  { label: 'Network', val: 'Polygon Amoy Testnet' },
+                  { label: 'Chain ID', val: '80002' },
+                  { label: 'Block Latency', val: '2.1s' },
+                  { label: 'Gas Sponsor', val: 'Active ⚡' },
+                ].map((item) => (
+                  <div key={item.label} className="p-3.5 bg-[#FAF8F4] border border-[#E9E4DD] rounded-xl">
+                    <p className="text-[11px] font-bold text-[#9B9490] uppercase">{item.label}</p>
+                    <p className="text-sm font-bold text-[#2D2A27] mt-1">{item.val}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  to="/blockchain-health"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#2D6A4F] text-white rounded-lg text-xs font-semibold hover:bg-[#245741] transition-colors shadow-xs"
+                >
+                  Inspect Full 19-Point Matrix <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* SECTION E: SPLIT VIEW (All Workspaces Together) */}
+        {(activeSection === 'all') && (
+          <motion.div
+            key="split-section"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
+          >
+            {/* Left 5 Cols: Neobank */}
+            <div className="lg:col-span-5">
+              <InteractiveNeobankPhone />
+            </div>
+
+            {/* Right 7 Cols: Verification Queue */}
+            <div className="lg:col-span-7 bg-white border border-[#E9E4DD] rounded-xl p-4 shadow-xs">
+              <h3 className="text-sm font-bold text-[#2D2A27] mb-3">Document Verification Queue</h3>
+              <div className="divide-y divide-[#E9E4DD]">
+                {filteredDocs.slice(0, 6).map((doc) => (
+                  <div key={doc._id} className="py-2.5 flex items-center justify-between text-xs">
+                    <span className="font-bold text-[#2D2A27] truncate max-w-[200px]">{doc.fileName || 'Doc'}</span>
+                    <StatusPill status={doc.status} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+      </AnimatePresence>
+
+      {/* Upload Modal */}
+      <DocumentUpload
+        isOpen={isUploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onSuccess={onUploadSuccess}
+      />
+    </div>
   );
 };
 

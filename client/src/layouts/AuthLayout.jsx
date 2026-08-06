@@ -1,55 +1,93 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FileText, ShieldCheck, Lock, CheckCircle2 } from 'lucide-react';
+
+const trust = [
+  { icon: ShieldCheck, label: 'SOC 2 Compliant' },
+  { icon: Lock,        label: 'End-to-End Encrypted' },
+  { icon: CheckCircle2, label: 'Blockchain Verified' },
+];
 
 const AuthLayout = () => {
   const location = useLocation();
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
-      {/* Left side - Branding (Desktop) */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-primary relative overflow-hidden items-center justify-center flex-col text-white p-12">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent to-black/30"></div>
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 text-center max-w-lg"
-        >
-          <div className="w-20 h-20 mx-auto bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center mb-8 border border-white/30 shadow-2xl">
-            <span className="text-4xl font-bold font-display">N</span>
-          </div>
-          <h1 className="text-5xl font-display font-bold mb-6">NotaryChain</h1>
-          <p className="text-lg text-primary-100 leading-relaxed">
-            Enterprise-grade digital notarization platform secured by blockchain. Verified, immutable, and globally trusted.
-          </p>
-        </motion.div>
+    <div className="min-h-screen bg-[#FAF8F4] flex">
 
-        {/* Floating elements animation */}
-        <motion.div 
-          animate={{ y: [0, -20, 0] }} 
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/4 left-1/4 w-32 h-32 bg-white/10 rounded-full blur-2xl"
-        />
-        <motion.div 
-          animate={{ y: [0, 20, 0] }} 
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-accent-500/20 rounded-full blur-2xl"
-        />
+      {/* ── Left Brand Panel ──────────────────────────── */}
+      <div className="hidden lg:flex lg:w-[480px] xl:w-[560px] bg-[#2D6A4F] flex-col justify-between p-12 relative overflow-hidden shrink-0">
+        {/* Decorative dot grid */}
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+
+        {/* Decorative circle */}
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-white/5" />
+        <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full bg-white/5" />
+
+        <div className="relative z-10">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-16">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <FileText className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-display font-700 text-xl text-white tracking-tight">NotaryChain</span>
+          </div>
+
+          {/* Headline */}
+          <h1 className="font-display text-4xl font-800 text-white leading-tight mb-4 tracking-tight">
+            Notarize documents with AI-grade precision.
+          </h1>
+          <p className="text-[#B3E4CC] text-base leading-relaxed mb-10">
+            Enterprise-grade digital notarization secured by blockchain. Trusted by 2,000+ organizations worldwide.
+          </p>
+
+          {/* Trust signals */}
+          <div className="space-y-3">
+            {trust.map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4 text-[#6DC8A0]" />
+                </div>
+                <span className="text-sm text-white/80">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="relative z-10 grid grid-cols-3 gap-4">
+          {[
+            { v: '50K+',   l: 'Documents' },
+            { v: '99.99%', l: 'Uptime' },
+            { v: '25+',    l: 'Countries' },
+          ].map((s) => (
+            <div key={s.l} className="bg-white/10 rounded-xl p-4 text-center">
+              <div className="font-display text-xl font-700 text-white mb-0.5">{s.v}</div>
+              <div className="text-xs text-white/60">{s.l}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Right side - Forms */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
+      {/* ── Right Form Panel ──────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25 }}
             className="w-full max-w-md"
           >
+            {/* Mobile logo */}
+            <div className="flex items-center gap-2 mb-8 lg:hidden">
+              <div className="w-8 h-8 rounded-lg bg-[#2D6A4F] flex items-center justify-center">
+                <FileText className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-display font-700 text-lg text-[#2E2A26]">NotaryChain</span>
+            </div>
+
             <Outlet />
           </motion.div>
         </AnimatePresence>

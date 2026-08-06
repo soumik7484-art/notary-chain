@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineDocumentText, HiOutlineArrowUpTray, HiOutlineXMark } from 'react-icons/hi2';
+import { motion } from 'framer-motion';
+import { UploadCloud, FileText, X } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import Button from '../common/Button';
@@ -27,52 +27,88 @@ const DocumentUpload = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2"><HiOutlineArrowUpTray className="text-indigo-400"/> Upload Document</h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"><HiOutlineXMark size={24}/></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2E2A26]/40 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="w-full max-w-xl bg-white border border-[#E8E2DA] rounded-2xl shadow-card-lg overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        {/* Modal Header */}
+        <div className="p-5 border-b border-[#E8E2DA] flex justify-between items-center bg-[#F6F3EE]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#2D6A4F] text-white flex items-center justify-center">
+              <UploadCloud className="w-4 h-4" />
+            </div>
+            <h2 className="font-display text-lg font-bold text-[#2E2A26]">Upload Document</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-[#7B746E] hover:text-[#2E2A26] hover:bg-[#E8E2DA]/50 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
         
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          <div {...getRootProps()} className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${isDragActive ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-500 bg-slate-800/30'}`}>
+        {/* Modal Body */}
+        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+          <div
+            {...getRootProps()}
+            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+              isDragActive ? 'border-[#2D6A4F] bg-[#F0FAF5]' : 'border-[#E8E2DA] bg-[#FFFDF9] hover:border-[#2D6A4F] hover:bg-[#F0FAF5]/50'
+            }`}
+          >
             <input {...getInputProps()} />
-            <div className="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center mb-4 text-indigo-400">
-              <HiOutlineDocumentText size={32} />
+            <div className="w-14 h-14 mx-auto bg-[#F0FAF5] border border-[#B3E4CC] rounded-2xl flex items-center justify-center mb-3 text-[#2D6A4F]">
+              <FileText className="w-7 h-7" />
             </div>
             {file ? (
               <div>
-                <p className="text-white font-medium text-lg">{file.name}</p>
-                <p className="text-slate-400 text-sm mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="text-[#2E2A26] font-bold text-sm">{file.name}</p>
+                <p className="text-[#7B746E] text-xs mt-0.5">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
               </div>
             ) : (
               <div>
-                <p className="text-white font-medium text-lg">Drag & drop your file here</p>
-                <p className="text-slate-400 text-sm mt-1">Supports PDF, DOCX, JPG up to 50MB</p>
+                <p className="text-[#2E2A26] font-semibold text-sm">Drag & drop your document here</p>
+                <p className="text-[#7B746E] text-xs mt-1">Supports PDF, DOCX, PNG, JPG up to 50MB</p>
               </div>
             )}
           </div>
 
           <div className="space-y-4">
+            <Input
+              label="Document Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Q3 Financial Report"
+            />
+            
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Document Title</label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-slate-800/50 text-white border-slate-700" placeholder="e.g. Q3 Financial Report" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Category</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-800/50 text-white border border-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
-                <option value="contract">Contract</option>
+              <label className="block text-xs font-semibold text-[#2E2A26] mb-1.5 uppercase tracking-wider">
+                Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white text-[#2E2A26] border border-[#E8E2DA] focus:border-[#2D6A4F] focus:ring-2 focus:ring-[#2D6A4F]/15 outline-none text-sm transition-all"
+              >
+                <option value="contract">Contract & Agreement</option>
                 <option value="identity">Identity Document</option>
                 <option value="financial">Financial Record</option>
-                <option value="other">Other</option>
+                <option value="other">Other Legal Document</option>
               </select>
             </div>
           </div>
         </div>
 
-        <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3">
-          <Button onClick={onClose} className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl">Cancel</Button>
-          <Button onClick={handleUpload} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-500/20">Upload & Analyze</Button>
+        {/* Modal Footer */}
+        <div className="p-4 border-t border-[#E8E2DA] bg-[#F6F3EE] flex justify-end gap-2.5">
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleUpload}>
+            Upload & Analyze
+          </Button>
         </div>
       </motion.div>
     </div>

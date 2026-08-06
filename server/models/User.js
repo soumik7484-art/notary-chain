@@ -23,10 +23,14 @@ const userSchema = new mongoose.Schema({
   mfaSecret: String,
   lastLogin: Date,
   loginCount: { type: Number, default: 0 },
+  
+  // Face ID & Passkey Biometric Data stored in MongoDB
   faceVerified: { type: Boolean, default: false },
+  faceEmbedding: [Number],
+  passkey: { type: String, default: null },
+  passkeyVerified: { type: Boolean, default: false },
   verificationDate: Date,
-  lastVerification: Date,
-  faceEmbedding: [Number]
+  lastVerification: Date
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 userSchema.virtual('fullName').get(function() {
@@ -38,14 +42,24 @@ userSchema.virtual('profileCompleted').get(function() {
 });
 
 userSchema.pre('save', async function(next) {
-  // Only hash password for local accounts that actually have a password
-  if (!this.isModified('password') || !this.password) return next();
-  this.password = await bcrypt.hash(this.password, 12);
+  // Hash password if modified
+  if (this.isModified('password') && this.password) {
+    this.password = await bcrypt.hash(this.password, 12);
+  }
+  // Hash security passkey if modified
+  if (this.isModified('passkey') && this.passkey && !this.passkey.startsWith('$2a$') && !this.passkey.startsWith('$2b$')) {
+    this.passkey = await bcrypt.hash(this.passkey, 12);
+  }
   next();
 });
 
 userSchema.methods.comparePassword = async function(candidate) {
   return await bcrypt.compare(candidate, this.password);
+};
+
+userSchema.methods.comparePasskey = async function(candidate) {
+  if (!this.passkey) return false;
+  return await bcrypt.compare(candidate, this.passkey);
 };
 
 userSchema.methods.createEmailVerificationToken = function() {
