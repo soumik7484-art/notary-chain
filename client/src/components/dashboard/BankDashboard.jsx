@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ShieldAlert, CheckCircle2, Clock, Eye, FileText, ArrowUpRight } from 'lucide-react';
+import { AnalyticsContent } from '../admin/Analytics';
 
 const BankDashboard = () => {
   return (
@@ -109,6 +110,12 @@ const BankDashboard = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ── Analytics & Market Data Graphs ── */}
+      <div className="pt-4">
+        <h2 className="text-lg font-bold text-[#2D2A27] mb-3">Analytics & Network Intelligence</h2>
+        <AnalyticsContent />
       </div>
     </div>
   );

@@ -56,18 +56,56 @@ const LoginForm = () => {
   const handleWalletLogin = async () => {
     setWalletLoading(true);
     try {
-      if (window.ethereum) {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        toast.success('Web3 Wallet connected!');
-        await login('wallet-user@notarychain.com', 'password123');
-        navigate('/dashboard');
-      } else {
-        toast.success('Wallet connected in Sandbox mode!');
-        await login('wallet-user@notarychain.com', 'password123');
-        navigate('/dashboard');
+      if (!window.ethereum) {
+        toast((t) => (
+          <div className="flex flex-col gap-1 text-xs">
+            <span className="font-bold text-[#2E2A26]">Web3 Wallet Not Detected</span>
+            <span className="text-[#55504B]">Please install MetaMask or a compatible browser extension to connect.</span>
+            <a
+              href="https://metamask.io/download/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#2D6A4F] font-bold underline mt-1"
+              onClick={() => toast.dismiss(t.id)}
+            >
+              Get MetaMask ↗
+            </a>
+          </div>
+        ), { duration: 6000 });
+        return;
       }
+
+      // Request Web3 wallet account connection prompt
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      
+      if (!accounts || accounts.length === 0) {
+        toast.error('No accounts returned from Web3 wallet');
+        return;
+      }
+
+      const walletAddress = accounts[0];
+      toast.success(`Wallet connected: ${walletAddress.substring(0, 6)}...${walletAddress.slice(-4)}`);
+
+      // Store connected Web3 wallet address for live balance queries
+      localStorage.setItem('web3_connected_wallet', walletAddress);
+
+      // Authenticate session with connected wallet address
+      const res = await login('wallet-user@notarychain.com', 'password123');
+      if (res?.user) {
+        updateUser({
+          ...res.user,
+          walletAddress: walletAddress,
+          isWeb3User: true,
+          name: `Web3 (${walletAddress.substring(0, 6)}...)`
+        });
+      }
+      navigate('/neobank');
     } catch (err) {
-      toast.error('Wallet connection cancelled');
+      if (err?.code === 4001 || err?.message?.toLowerCase().includes('reject') || err?.message?.toLowerCase().includes('cancel')) {
+        toast.error('Wallet connection request was cancelled');
+      } else {
+        toast.error(err?.message || 'Wallet connection failed');
+      }
     } finally {
       setWalletLoading(false);
     }

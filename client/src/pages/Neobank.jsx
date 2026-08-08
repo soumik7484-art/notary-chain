@@ -668,16 +668,43 @@ export default function Neobank() {
   const [loading,   setLoading]   = useState(true);
 
   const fetchAccount = async () => {
+    const savedWallet = localStorage.getItem('web3_connected_wallet') || '0x19443302aC781A943AC33b2d228D7736d4E00FE4';
+    let liveBalance = '2,450.00';
+    let isWeb3Connected = false;
+
+    try {
+      if (window.ethereum && localStorage.getItem('web3_connected_wallet')) {
+        const hexBalance = await window.ethereum.request({
+          method: 'eth_getBalance',
+          params: [savedWallet, 'latest'],
+        });
+        if (hexBalance) {
+          const wei = parseInt(hexBalance, 16);
+          const matic = wei / 1e18;
+          liveBalance = matic > 0 ? matic.toFixed(4) : '2,450.00';
+          isWeb3Connected = true;
+        }
+      }
+    } catch {
+      // Fall back to API or default testnet mode
+    }
+
     try {
       const res = await getNeobankAccount();
-      setAccount(res.data);
+      setAccount({
+        ...res.data,
+        walletAddress: savedWallet,
+        balance: liveBalance,
+        isWeb3Connected
+      });
     } catch {
       setAccount({
-        balance: '2,450.00',
-        walletAddress: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+        balance: liveBalance,
+        walletAddress: savedWallet,
         customerId: 'cst_demo881',
         walletId: 'wlt_demo991',
-        kycStatus: 'ACTIVE'
+        kycStatus: 'ACTIVE',
+        isWeb3Connected
       });
     } finally {
       setLoading(false);

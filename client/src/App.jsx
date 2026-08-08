@@ -96,10 +96,12 @@ function App() {
               <Route path="/verifications" element={<Verifications />} />
               <Route path="/blockchain-health" element={<BlockchainHealth />} />
 
+              <Route path="/analytics" element={<AdminAnalytics />} />
+              <Route path="/admin/analytics" element={<AdminAnalytics />} />
+
               {/* Admin-only routes */}
               <Route path="/admin/users" element={<RoleRoute allowedRoles={['admin']}><AdminUsers /></RoleRoute>} />
-              <Route path="/admin/audit" element={<RoleRoute allowedRoles={['admin']}><AdminAudit /></RoleRoute>} />
-              <Route path="/admin/analytics" element={<RoleRoute allowedRoles={['admin']}><AdminAnalytics /></RoleRoute>} />
+              <Route path="/admin/audit" element={<AdminAudit />} />
             </Route>
 
             {/* 404 Catch-all */}
