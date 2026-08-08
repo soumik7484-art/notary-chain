@@ -30,8 +30,8 @@ export default function IPhoneFrame({ children, activeTab, onTabChange }) {
           {children}
         </div>
 
-        {/* Bottom Tab Bar */}
-        <div className="w-full h-16 bg-slate-950/95 backdrop-blur-xl border-t border-white/10 flex items-center justify-around px-2 z-40 select-none shrink-0">
+        {/* Bottom Tab Bar — mobile only; desktop uses top nav in Neobank.jsx */}
+        <div className="lg:hidden w-full h-16 bg-slate-950/95 backdrop-blur-xl border-t border-white/10 flex items-center justify-around px-2 z-40 select-none shrink-0">
           <button
             onClick={() => onTabChange('home')}
             className={`flex flex-col items-center space-y-1 transition-colors ${activeTab === 'home' ? 'text-[#2D6A4F] font-semibold scale-105' : 'text-slate-400 hover:text-slate-200'}`}

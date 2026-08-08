@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import {
+  ArrowLeft, CreditCard, QrCode, Building2, ArrowUpRight,
+  ArrowDownLeft, History, ShieldCheck, Zap, CheckCircle2,
+  Copy, ChevronRight, TrendingUp, Eye, EyeOff, Check,
+  Send, Wallet, Activity
+} from 'lucide-react';
 import IPhoneFrame from '../components/neobank/IPhoneFrame';
 import HomeScreen from '../components/neobank/HomeScreen';
 import CashInScreen from '../components/neobank/CashInScreen';
@@ -10,17 +17,626 @@ import HistoryScreen from '../components/neobank/HistoryScreen';
 import KycScreen from '../components/neobank/KycScreen';
 import { getNeobankAccount } from '../api/neobankApi';
 
+/* ────────────────────────────────────────────────────────────────
+   DESIGN TOKENS  ─ white/light base, green · red · blue accents
+   Single source of truth. Change here → changes everywhere.
+──────────────────────────────────────────────────────────────── */
+const T = {
+  /* ── Surfaces ─────────────────────────────────────────────── */
+  pageBg:     '#F4F6F8',      // outermost page tint
+  surface:    '#FFFFFF',      // cards, sidebar, header
+  surfaceAlt: '#F7F8FA',      // inner tinted sections
+  border:     '#E5E7EB',      // universal 1-px border
+  borderFocus:'#3B82F6',      // focus ring / active state
+
+  /* ── Typography ───────────────────────────────────────────── */
+  textPrimary:   '#111827',   // headings, amounts, labels
+  textSecondary: '#6B7280',   // dates, sub-labels
+  textTertiary:  '#9CA3AF',   // placeholders, mono addresses
+
+  /* ── GREEN — positive / success / primary CTA ─────────────── */
+  green:         '#16A34A',
+  greenLight:    '#F0FDF4',
+  greenBorder:   '#BBF7D0',
+  greenText:     '#15803D',
+
+  /* ── RED — negative / alerts / outgoing amounts ───────────── */
+  red:           '#DC2626',
+  redLight:      '#FEF2F2',
+  redBorder:     '#FECACA',
+  redText:       '#B91C1C',
+
+  /* ── BLUE — informational / neutral actions / Polygon ─────── */
+  blue:          '#2563EB',
+  blueLight:     '#EFF6FF',
+  blueBorder:    '#BFDBFE',
+  blueText:      '#1D4ED8',
+
+  /* ── Elevation (light-mode drop shadows, NO glow) ─────────── */
+  shadowXs: '0 1px 2px rgba(0,0,0,0.05)',
+  shadowSm: '0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)',
+  shadowMd: '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04)',
+  shadowLg: '0 8px 24px rgba(0,0,0,0.09), 0 4px 8px rgba(0,0,0,0.04)',
+
+  /* ── Radii (consistent across every card / pill / button) ─── */
+  radiusSm: '8px',
+  radiusMd: '12px',
+  radiusLg: '16px',
+  radiusXl: '20px',
+  radiusFull: '9999px',
+};
+
+/* ────────────────────────────────────────────────────────────────
+   NAV TABS
+──────────────────────────────────────────────────────────────── */
+const NAV_TABS = [
+  { id: 'home',     label: 'Wallet',  icon: Wallet        },
+  { id: 'cash-in',  label: 'Cash-In', icon: QrCode        },
+  { id: 'send',     label: 'Send',    icon: Send          },
+  { id: 'deposit',  label: 'Top-Up',  icon: Building2     },
+  { id: 'withdraw', label: 'Payout',  icon: ArrowDownLeft },
+  { id: 'history',  label: 'History', icon: History       },
+  { id: 'kyc',      label: 'KYC',     icon: ShieldCheck   },
+];
+
+/* ────────────────────────────────────────────────────────────────
+   STATUS PILL
+   variant: 'green' | 'red' | 'blue' | 'neutral'
+──────────────────────────────────────────────────────────────── */
+const StatusPill = ({ label, variant = 'green', className = '' }) => {
+  const map = {
+    green:   { bg: T.greenLight, border: T.greenBorder, text: T.greenText, dot: T.green   },
+    red:     { bg: T.redLight,   border: T.redBorder,   text: T.redText,   dot: T.red     },
+    blue:    { bg: T.blueLight,  border: T.blueBorder,  text: T.blueText,  dot: T.blue    },
+    neutral: { bg: '#F9FAFB',    border: T.border,      text: T.textSecondary, dot: T.textTertiary },
+  };
+  const v = map[variant] || map.neutral;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${className}`}
+      style={{
+        background: v.bg,
+        border: `1px solid ${v.border}`,
+        color: v.text,
+        borderRadius: T.radiusFull,
+      }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: v.dot }} />
+      {label}
+    </span>
+  );
+};
+
+/* ────────────────────────────────────────────────────────────────
+   BALANCE CARD
+   Premium white card with green top-border accent stripe
+──────────────────────────────────────────────────────────────── */
+const BalanceCard = ({ account }) => {
+  const [hidden, setHidden] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const addr = account?.walletAddress || '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
+  const shortAddr = `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+
+  const copyAddr = () => {
+    navigator.clipboard.writeText(addr).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div
+      style={{
+        background: T.surface,
+        borderRadius: T.radiusXl,
+        border: `1px solid ${T.border}`,
+        boxShadow: T.shadowMd,
+        overflow: 'hidden',
+      }}
+    >
+      {/* Accent stripe — 3px green top bar, design intentionality */}
+      <div style={{ height: '3px', background: `linear-gradient(90deg, ${T.green}, #4ADE80)` }} />
+
+      <div style={{ padding: '20px' }}>
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}` }}
+            >
+              <span className="text-base">💳</span>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: T.greenText }}>
+                USD Balance
+              </p>
+              <p className="text-[10px]" style={{ color: T.textTertiary }}>Settled in USDC</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <StatusPill label="Polygon" variant="blue" />
+            <button
+              onClick={() => setHidden(h => !h)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-gray-100"
+              style={{ border: `1px solid ${T.border}` }}
+            >
+              {hidden
+                ? <EyeOff className="w-3.5 h-3.5" style={{ color: T.textSecondary }} />
+                : <Eye    className="w-3.5 h-3.5" style={{ color: T.textSecondary }} />
+              }
+            </button>
+          </div>
+        </div>
+
+        {/* Balance — dominant type */}
+        <p className="text-[11px] font-medium mb-1" style={{ color: T.textSecondary }}>
+          Available Balance
+        </p>
+        <div className="flex items-baseline gap-2 mb-4">
+          <span
+            style={{
+              fontSize: '36px',
+              fontWeight: 800,
+              lineHeight: 1,
+              color: T.textPrimary,
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {hidden ? '••••••' : `$${account?.balance || '2,450.00'}`}
+          </span>
+          <span className="text-sm font-semibold" style={{ color: T.textSecondary }}>USD</span>
+        </div>
+
+        {/* KYC status */}
+        <div className="flex items-center gap-2 mb-5">
+          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: T.green }} />
+          <p className="text-[11px] font-semibold" style={{ color: T.greenText }}>
+            KYC {account?.kycStatus || 'ACTIVE'} · Custodial OMS
+          </p>
+        </div>
+
+        {/* Footer row: address + gas */}
+        <div
+          className="flex items-center justify-between gap-3 pt-4"
+          style={{ borderTop: `1px solid ${T.border}` }}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] font-mono font-semibold" style={{ color: T.textTertiary }}>ADDR</span>
+            <span className="text-[11px] font-mono truncate" style={{ color: T.textSecondary }}>{shortAddr}</span>
+            <button
+              onClick={copyAddr}
+              className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center transition-all hover:bg-gray-100"
+              style={{ border: `1px solid ${T.border}` }}
+            >
+              {copied
+                ? <Check className="w-3 h-3" style={{ color: T.green }} />
+                : <Copy  className="w-3 h-3" style={{ color: T.textTertiary }} />
+              }
+            </button>
+          </div>
+          {/* Gas Free — blue since it's an informational feature */}
+          <div
+            className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+            style={{ background: T.blueLight, border: `1px solid ${T.blueBorder}` }}
+          >
+            <Zap className="w-3 h-3" style={{ color: T.blue }} />
+            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: T.blueText }}>
+              Gas Free
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ────────────────────────────────────────────────────────────────
+   QUICK ACTIONS
+   Unified strip · green = send (outgoing CTA), blue = info/neutral,
+   red = payout (outgoing/debit)
+──────────────────────────────────────────────────────────────── */
+const QuickActions = ({ onNavigate }) => {
+  /* Color semantics:
+     Send     → green  (primary action)
+     Cash-In  → blue   (informational inflow)
+     Top-Up   → blue   (informational add-funds)
+     Payout   → red    (outgoing / debit-coded)
+  */
+  const actions = [
+    { id: 'send',    label: 'Send',    icon: Send,          bg: T.greenLight, iconColor: T.green,  border: T.greenBorder },
+    { id: 'cash-in', label: 'Cash-In', icon: QrCode,        bg: T.blueLight,  iconColor: T.blue,   border: T.blueBorder  },
+    { id: 'deposit', label: 'Top-Up',  icon: Building2,     bg: T.blueLight,  iconColor: T.blue,   border: T.blueBorder  },
+    { id: 'withdraw',label: 'Payout',  icon: ArrowDownLeft, bg: T.redLight,   iconColor: T.red,    border: T.redBorder   },
+  ];
+
+  return (
+    <div>
+      <p
+        className="text-[10px] font-bold uppercase tracking-widest mb-2.5"
+        style={{ color: T.textTertiary }}
+      >
+        Quick Actions
+      </p>
+      {/* One unified card, buttons separated by 1px internal dividers */}
+      <div
+        style={{
+          background: T.surface,
+          borderRadius: T.radiusLg,
+          border: `1px solid ${T.border}`,
+          boxShadow: T.shadowSm,
+          overflow: 'hidden',
+        }}
+      >
+        <div className="grid grid-cols-4">
+          {actions.map(({ id, label, icon: Icon, bg, iconColor, border: accentBorder }, idx) => (
+            <button
+              key={id}
+              onClick={() => onNavigate(id)}
+              className="group flex flex-col items-center gap-2.5 py-4 px-2 transition-all"
+              style={{
+                borderRight: idx < 3 ? `1px solid ${T.border}` : 'none',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = T.surfaceAlt; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.95)'; }}
+              onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-105"
+                style={{ background: bg, border: `1px solid ${accentBorder}` }}
+              >
+                <Icon className="w-4 h-4" strokeWidth={2.5} style={{ color: iconColor }} />
+              </div>
+              <span
+                className="text-[11px] font-semibold"
+                style={{ color: T.textSecondary }}
+              >
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ────────────────────────────────────────────────────────────────
+   VIRTUAL BANK CARD
+──────────────────────────────────────────────────────────────── */
+const VirtualBankCard = ({ onNavigate }) => (
+  <div
+    className="flex items-center gap-3 p-4"
+    style={{
+      background: T.surface,
+      borderRadius: T.radiusLg,
+      border: `1px solid ${T.border}`,
+      boxShadow: T.shadowSm,
+    }}
+  >
+    <div
+      className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+      style={{ background: T.blueLight, border: `1px solid ${T.blueBorder}` }}
+    >
+      🏦
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[13px] font-bold" style={{ color: T.textPrimary }}>
+        US Bank Virtual Account
+      </p>
+      <p className="text-[11px] mt-0.5" style={{ color: T.textSecondary }}>
+        ACH & Wire → auto-converts to USDC
+      </p>
+    </div>
+    <button
+      onClick={() => onNavigate('deposit')}
+      className="shrink-0 px-3.5 py-2 text-[11px] font-bold rounded-xl transition-all active:scale-95"
+      style={{
+        background: T.blueLight,
+        border: `1px solid ${T.blueBorder}`,
+        color: T.blueText,
+        borderRadius: T.radiusMd,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = T.blue;
+        e.currentTarget.style.color = '#fff';
+        e.currentTarget.style.borderColor = T.blue;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = T.blueLight;
+        e.currentTarget.style.color = T.blueText;
+        e.currentTarget.style.borderColor = T.blueBorder;
+      }}
+    >
+      View Info
+    </button>
+  </div>
+);
+
+/* ────────────────────────────────────────────────────────────────
+   RECENT TRANSACTIONS
+   +amounts → green · -amounts → red
+──────────────────────────────────────────────────────────────── */
+const RecentTxns = ({ account, onViewAll }) => {
+  const transactions = account?.transactions || [
+    { id: 't1', title: 'Sent to @ada',         amount: '-$150.00',   status: 'Completed', date: '2 mins ago',   icon: 'send' },
+    { id: 't2', title: '7-Eleven Cash Top-Up', amount: '+$500.00',   status: 'Completed', date: 'Yesterday',    icon: 'cash' },
+    { id: 't3', title: 'ACH Direct Deposit',   amount: '+$2,100.00', status: 'Completed', date: 'Jul 28, 2026', icon: 'bank' },
+  ];
+
+  /* icon visual: outgoing=red-tinted, incoming=green-tinted, bank=blue-tinted */
+  const iconMeta = {
+    send: { label: '↗', bg: T.redLight,   color: T.red   },
+    cash: { label: '↙', bg: T.greenLight, color: T.green },
+    bank: { label: '🏦', bg: T.blueLight, color: T.blue  },
+  };
+
+  return (
+    <div
+      style={{
+        background: T.surface,
+        borderRadius: T.radiusLg,
+        border: `1px solid ${T.border}`,
+        boxShadow: T.shadowSm,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        className="flex items-center justify-between px-5 py-3.5"
+        style={{ borderBottom: `1px solid ${T.border}` }}
+      >
+        <p className="text-[13px] font-bold" style={{ color: T.textPrimary }}>Recent Transactions</p>
+        <button
+          onClick={onViewAll}
+          className="flex items-center gap-0.5 text-[11px] font-semibold transition-colors"
+          style={{ color: T.blue }}
+          onMouseEnter={e => { e.currentTarget.style.color = T.blueText; }}
+          onMouseLeave={e => { e.currentTarget.style.color = T.blue; }}
+        >
+          View All <ChevronRight className="w-3 h-3" />
+        </button>
+      </div>
+
+      {transactions.slice(0, 5).map((tx, i) => {
+        const ic = iconMeta[tx.icon] || iconMeta.bank;
+        const isCredit = tx.amount.startsWith('+');
+        return (
+          <div
+            key={tx.id}
+            className="flex items-center justify-between px-5 py-3.5 transition-colors cursor-default"
+            style={{ borderBottom: i < transactions.slice(0, 5).length - 1 ? `1px solid ${T.border}` : 'none' }}
+            onMouseEnter={e => { e.currentTarget.style.background = T.surfaceAlt; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                style={{ background: ic.bg, color: ic.color, border: `1px solid ${ic.bg === T.redLight ? T.redBorder : ic.bg === T.greenLight ? T.greenBorder : T.blueBorder}` }}
+              >
+                {ic.label}
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold" style={{ color: T.textPrimary }}>{tx.title}</p>
+                <p className="text-[10px] mt-0.5" style={{ color: T.textTertiary }}>{tx.date}</p>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <p
+                className="text-[12px] font-bold"
+                style={{ color: isCredit ? T.green : T.red }}
+              >
+                {tx.amount}
+              </p>
+              {/* Completed → green badge */}
+              <StatusPill label={tx.status} variant="green" className="mt-1" />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/* ────────────────────────────────────────────────────────────────
+   NETWORK STATUS PANEL
+   Live/Healthy → green · Gas Sponsored → blue (informational)
+──────────────────────────────────────────────────────────────── */
+const NetworkStatus = () => {
+  const rows = [
+    { label: 'Polygon Amoy',    value: 'Live',    variant: 'green' },
+    { label: 'Gas Sponsorship', value: 'Active',  variant: 'blue'  },
+    { label: 'OMS API',         value: 'Healthy', variant: 'green' },
+  ];
+  return (
+    <div
+      style={{
+        background: T.surface,
+        borderRadius: T.radiusLg,
+        border: `1px solid ${T.border}`,
+        boxShadow: T.shadowSm,
+        padding: '16px',
+      }}
+    >
+      <p className="text-[10px] font-bold uppercase tracking-widest mb-3.5" style={{ color: T.textTertiary }}>
+        Network Status
+      </p>
+      <div className="space-y-2.5">
+        {rows.map(({ label, value, variant }) => (
+          <div key={label} className="flex items-center justify-between">
+            <span className="text-[12px]" style={{ color: T.textSecondary }}>{label}</span>
+            <StatusPill label={value} variant={variant} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ────────────────────────────────────────────────────────────────
+   SKELETON LOADER
+──────────────────────────────────────────────────────────────── */
+const Skeleton = () => (
+  <div className="space-y-3 animate-pulse">
+    {[160, 110, 72].map(h => (
+      <div
+        key={h}
+        style={{ height: h, background: T.surfaceAlt, borderRadius: T.radiusLg, border: `1px solid ${T.border}` }}
+      />
+    ))}
+  </div>
+);
+
+/* ────────────────────────────────────────────────────────────────
+   COIN MASCOT  — friendly empty-state for the desktop centre panel
+   Pure CSS + keyframe animation. Uses app's green/blue/gold palette.
+──────────────────────────────────────────────────────────────── */
+const coinBounce = {
+  animate: {
+    y: [0, -10, 0],
+    transition: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' },
+  },
+};
+
+const CoinMascot = () => (
+  <div className="flex flex-col items-center justify-center py-16 px-6 select-none">
+    {/* Coin body */}
+    <motion.div
+      {...coinBounce}
+      className="relative"
+    >
+      {/* Shadow on "ground" */}
+      <motion.div
+        animate={{ scaleX: [1, 0.85, 1] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-20 h-3 rounded-full"
+        style={{ background: 'radial-gradient(ellipse, rgba(0,0,0,0.08) 0%, transparent 70%)' }}
+      />
+
+      {/* Outer coin ring */}
+      <div
+        className="relative w-28 h-28 rounded-full flex items-center justify-center"
+        style={{
+          background: 'linear-gradient(145deg, #FDE68A, #F59E0B, #D97706)',
+          boxShadow: '0 6px 24px rgba(245,158,11,0.3), inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.1)',
+        }}
+      >
+        {/* Inner coin face */}
+        <div
+          className="w-[90px] h-[90px] rounded-full flex flex-col items-center justify-center"
+          style={{
+            background: 'linear-gradient(160deg, #FEF3C7, #FDE68A)',
+            boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.06), inset 0 -1px 3px rgba(255,255,255,0.8)',
+          }}
+        >
+          {/* Face */}
+          <div className="flex items-center gap-2.5 mb-1.5 mt-1">
+            {/* Left eye */}
+            <div className="relative">
+              <div className="w-3 h-3 rounded-full" style={{ background: '#92400E' }} />
+              <div className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-white/70" />
+            </div>
+            {/* Right eye */}
+            <div className="relative">
+              <div className="w-3 h-3 rounded-full" style={{ background: '#92400E' }} />
+              <div className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-white/70" />
+            </div>
+          </div>
+          {/* Smile */}
+          <div
+            className="w-5 h-2.5 rounded-b-full"
+            style={{ borderBottom: '2.5px solid #92400E', borderLeft: '2.5px solid #92400E', borderRight: '2.5px solid #92400E' }}
+          />
+          {/* Dollar sign */}
+          <div
+            className="mt-1.5 text-[11px] font-extrabold tracking-wider"
+            style={{ color: '#B45309' }}
+          >
+            $
+          </div>
+        </div>
+
+        {/* Left arm */}
+        <motion.div
+          animate={{ rotate: [-8, 8, -8] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -left-3 top-1/2 -translate-y-1/2 origin-right"
+        >
+          <div
+            className="w-6 h-2.5 rounded-full"
+            style={{ background: 'linear-gradient(90deg, #F59E0B, #FBBF24)' }}
+          />
+          <div
+            className="w-2 h-2 rounded-full absolute -left-1 top-1/2 -translate-y-1/2"
+            style={{ background: '#FBBF24' }}
+          />
+        </motion.div>
+
+        {/* Right arm */}
+        <motion.div
+          animate={{ rotate: [8, -8, 8] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 origin-left"
+        >
+          <div
+            className="w-6 h-2.5 rounded-full"
+            style={{ background: 'linear-gradient(270deg, #F59E0B, #FBBF24)' }}
+          />
+          <div
+            className="w-2 h-2 rounded-full absolute -right-1 top-1/2 -translate-y-1/2"
+            style={{ background: '#FBBF24' }}
+          />
+        </motion.div>
+      </div>
+    </motion.div>
+
+    {/* Message */}
+    <div className="mt-8 text-center">
+      <p
+        className="text-[15px] font-bold"
+        style={{ color: T.textPrimary, fontFamily: 'var(--font-display)' }}
+      >
+        Ready when you are!
+      </p>
+      <p className="text-[13px] mt-1.5" style={{ color: T.textSecondary }}>
+        Select an action from the sidebar or top nav to get started.
+      </p>
+    </div>
+
+    {/* Quick hint chips */}
+    <div className="flex items-center gap-2 mt-6">
+      {[
+        { label: 'Send',    color: T.green, bg: T.greenLight, border: T.greenBorder },
+        { label: 'Cash-In', color: T.blue,  bg: T.blueLight,  border: T.blueBorder  },
+        { label: 'Top-Up',  color: T.blue,  bg: T.blueLight,  border: T.blueBorder  },
+        { label: 'Payout',  color: T.red,   bg: T.redLight,   border: T.redBorder   },
+      ].map(({ label, color, bg, border }) => (
+        <span
+          key={label}
+          className="px-3 py-1 rounded-full text-[11px] font-semibold"
+          style={{ background: bg, color, border: `1px solid ${border}` }}
+        >
+          {label}
+        </span>
+      ))}
+    </div>
+  </div>
+);
+
+/* ────────────────────────────────────────────────────────────────
+   MAIN PAGE
+──────────────────────────────────────────────────────────────── */
 export default function Neobank() {
+  const navigate  = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
-  const [account, setAccount] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [account,   setAccount]   = useState(null);
+  const [loading,   setLoading]   = useState(true);
 
   const fetchAccount = async () => {
     try {
       const res = await getNeobankAccount();
       setAccount(res.data);
-    } catch (err) {
-      // Fallback state
+    } catch {
       setAccount({
         balance: '2,450.00',
         walletAddress: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
@@ -33,60 +649,272 @@ export default function Neobank() {
     }
   };
 
-  useEffect(() => {
-    fetchAccount();
-  }, []);
+  useEffect(() => { fetchAccount(); }, []);
 
-  const renderActiveScreen = () => {
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/dashboard');
+  };
+
+  /* renderScreen — used by MOBILE (inside IPhoneFrame) — includes HomeScreen */
+  const renderScreen = () => {
     switch (activeTab) {
-      case 'home':
-        return <HomeScreen account={account} onNavigate={(tab) => setActiveTab(tab)} />;
-      case 'cash-in':
-        return <CashInScreen account={account} />;
-      case 'send':
-        return <SendScreen account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
-      case 'deposit':
-        return <DepositScreen account={account} />;
-      case 'withdraw':
-        return <WithdrawScreen account={account} />;
-      case 'history':
-        return <HistoryScreen />;
-      case 'kyc':
-        return <KycScreen account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
-      default:
-        return <HomeScreen account={account} onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'home':     return <HomeScreen     account={account} onNavigate={setActiveTab} />;
+      case 'cash-in':  return <CashInScreen   account={account} />;
+      case 'send':     return <SendScreen     account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
+      case 'deposit':  return <DepositScreen  account={account} />;
+      case 'withdraw': return <WithdrawScreen account={account} />;
+      case 'history':  return <HistoryScreen />;
+      case 'kyc':      return <KycScreen      account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
+      default:         return <HomeScreen     account={account} onNavigate={setActiveTab} />;
     }
   };
 
+  /* renderDesktopCentre — used by DESKTOP centre panel only.
+     'home' tab → coin mascot (balance already shown in left sidebar).
+     Other tabs → their screen component inside a clean white card. */
+  const isIdleState = activeTab === 'home';
+
+  const renderDesktopCentre = () => {
+    if (isIdleState) return <CoinMascot />;
+    switch (activeTab) {
+      case 'cash-in':  return <CashInScreen   account={account} />;
+      case 'send':     return <SendScreen     account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
+      case 'deposit':  return <DepositScreen  account={account} />;
+      case 'withdraw': return <WithdrawScreen account={account} />;
+      case 'history':  return <HistoryScreen />;
+      case 'kyc':      return <KycScreen      account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
+      default:         return <CoinMascot />;
+    }
+  };
+
+  /* ── MOBILE: untouched iPhone-frame layout ──────────────────── */
   return (
-    <div className="min-h-screen bg-[#FAF8F4] flex flex-col items-center justify-center p-4 text-[#2E2A26]">
-      <div className="text-center max-w-lg mb-4">
-        <h1 className="font-display text-2xl font-bold text-[#2E2A26] tracking-tight flex items-center justify-center gap-2">
-          <span>Polygon Open Money Stack</span>
-          <span className="px-2.5 py-0.5 rounded-full bg-[#F0FAF5] text-[#2D6A4F] text-xs font-mono border border-[#B3E4CC]">
-            v0.11 Sandbox
-          </span>
-        </h1>
-        <p className="text-xs text-[#7B746E] mt-1 font-medium">
-          Interactive Neobank • Custodial USDC Wallets • In-Person Cash-In • Instant P2P Transfers
-        </p>
+    <>
+      <div
+        className="lg:hidden min-h-screen flex flex-col items-center justify-start pt-4 px-4 pb-6"
+        style={{ background: T.pageBg }}
+      >
+        <div className="w-full max-w-[390px] flex items-center gap-3 mb-4">
+          <button
+            onClick={handleBack}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-all active:scale-95"
+            style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadowXs }}
+          >
+            <ArrowLeft className="w-4 h-4" strokeWidth={2.5} style={{ color: T.textPrimary }} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-bold text-[15px] flex items-center gap-2 flex-wrap" style={{ color: T.textPrimary }}>
+              Polygon Open Money Stack
+              <StatusPill label="v0.11 Sandbox" variant="green" />
+            </h1>
+            <p className="text-[10px] font-medium mt-0.5" style={{ color: T.textSecondary }}>
+              Custodial USDC · Instant P2P Transfers
+            </p>
+          </div>
+        </div>
+        <IPhoneFrame activeTab={activeTab} onTabChange={setActiveTab}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2 }}
+              className="flex-1"
+            >
+              {renderScreen()}
+            </motion.div>
+          </AnimatePresence>
+        </IPhoneFrame>
       </div>
 
-      {/* iPhone Device Frame Container */}
-      <IPhoneFrame activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab)}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -8 }}
-            transition={{ duration: 0.2 }}
-            className="flex-1"
+      {/* ── DESKTOP: clean white/light full layout ─────────────── */}
+      <div
+        className="hidden lg:flex min-h-screen flex-col"
+        style={{ background: T.pageBg }}
+      >
+        {/* Top nav bar */}
+        <header
+          className="px-6 h-[54px] flex items-center gap-4 sticky top-0 z-30"
+          style={{
+            background: T.surface,
+            borderBottom: `1px solid ${T.border}`,
+            boxShadow: T.shadowXs,
+          }}
+        >
+          {/* Back button */}
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95"
+            style={{
+              background: T.surfaceAlt,
+              border: `1px solid ${T.border}`,
+              color: T.textSecondary,
+              borderRadius: T.radiusSm,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = T.border; e.currentTarget.style.color = T.textPrimary; }}
+            onMouseLeave={e => { e.currentTarget.style.background = T.surfaceAlt; e.currentTarget.style.color = T.textSecondary; }}
           >
-            {renderActiveScreen()}
-          </motion.div>
-        </AnimatePresence>
-      </IPhoneFrame>
-    </div>
+            <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.5} />
+            Back
+          </button>
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 20, background: T.border }} />
+
+          {/* Brand */}
+          <div className="flex items-center gap-2.5">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
+              style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}` }}
+            >
+              💳
+            </div>
+            <span className="font-bold text-[14px]" style={{ color: T.textPrimary }}>
+              Polygon Open Money Stack
+            </span>
+            <StatusPill label="v0.11 Sandbox" variant="green" />
+          </div>
+
+          {/* Nav tabs */}
+          <nav className="ml-auto flex items-center gap-0.5">
+            {NAV_TABS.map(({ id, label, icon: Icon }) => {
+              const active = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className="flex items-center gap-1.5 px-3 h-8 text-xs font-semibold transition-all"
+                  style={{
+                    background:   active ? T.green : 'transparent',
+                    color:        active ? '#fff'  : T.textSecondary,
+                    borderRadius: T.radiusSm,
+                    border:       active ? `1px solid ${T.green}` : '1px solid transparent',
+                  }}
+                  onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.surfaceAlt; e.currentTarget.style.color = T.textPrimary; }}}
+                  onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.textSecondary; }}}
+                >
+                  <Icon className="w-3.5 h-3.5" strokeWidth={2} />
+                  {label}
+                </button>
+              );
+            })}
+          </nav>
+        </header>
+
+        {/* 3-column content */}
+        <div className="flex-1 flex overflow-hidden">
+
+          {/* LEFT: Balance + Actions + Bank card */}
+          <aside
+            className="w-[320px] xl:w-[360px] shrink-0 flex flex-col gap-4 p-5 overflow-y-auto"
+            style={{
+              background: T.pageBg,
+              borderRight: `1px solid ${T.border}`,
+            }}
+          >
+            {loading ? <Skeleton /> : (
+              <>
+                <BalanceCard account={account} />
+                <QuickActions onNavigate={setActiveTab} />
+                <VirtualBankCard onNavigate={setActiveTab} />
+              </>
+            )}
+          </aside>
+
+          {/* CENTRE: Active screen */}
+          <main
+            className="flex-1 overflow-y-auto"
+            style={{ background: T.pageBg }}
+          >
+            <div className="max-w-2xl mx-auto px-8 py-7">
+              {/* Breadcrumb */}
+              <div
+                className="flex items-center gap-1.5 text-[11px] font-medium mb-5"
+                style={{ color: T.textSecondary }}
+              >
+                <span>Polygon Neobank</span>
+                <ChevronRight className="w-3 h-3" style={{ color: T.textTertiary }} />
+                <span style={{ color: T.textPrimary, fontWeight: 700 }}>
+                  {NAV_TABS.find(t => t.id === activeTab)?.label || 'Wallet'}
+                </span>
+              </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                >
+                  {isIdleState ? (
+                    /* Idle state — mascot in a clean white card */
+                    <div
+                      style={{
+                        borderRadius: T.radiusXl,
+                        background: T.surface,
+                        border: `1px solid ${T.border}`,
+                        boxShadow: T.shadowSm,
+                      }}
+                    >
+                      {renderDesktopCentre()}
+                    </div>
+                  ) : (
+                    /* Active screen — wrapped in a card container */
+                    <div
+                      style={{
+                        borderRadius: T.radiusXl,
+                        overflow: 'hidden',
+                        border: `1px solid ${T.border}`,
+                        boxShadow: T.shadowMd,
+                      }}
+                    >
+                      {renderDesktopCentre()}
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </main>
+
+          {/* RIGHT: Transactions + Network */}
+          <aside
+            className="w-[288px] xl:w-[320px] shrink-0 flex flex-col gap-4 p-5 overflow-y-auto"
+            style={{
+              background: T.pageBg,
+              borderLeft: `1px solid ${T.border}`,
+            }}
+          >
+            <div>
+              <p
+                className="text-[10px] font-bold uppercase tracking-widest mb-3"
+                style={{ color: T.textTertiary }}
+              >
+                Live Feed
+              </p>
+              {loading  && <Skeleton />}
+              {!loading && <RecentTxns account={account} onViewAll={() => setActiveTab('history')} />}
+            </div>
+
+            <NetworkStatus />
+
+            {/* Footer */}
+            <div
+              className="mt-auto flex items-center gap-2 pt-4"
+              style={{ borderTop: `1px solid ${T.border}` }}
+            >
+              <Activity className="w-3.5 h-3.5 shrink-0" style={{ color: T.green }} />
+              <p className="text-[10px] leading-snug" style={{ color: T.textTertiary }}>
+                Powered by{' '}
+                <span style={{ color: T.green, fontWeight: 700 }}>Polygon Open Money Stack</span>
+                {' '}· Custodial USDC settlement
+              </p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </>
   );
 }
