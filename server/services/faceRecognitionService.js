@@ -1,93 +1,149 @@
-const crypto = require('crypto');
-
 /**
- * 128-Dimensional Biometric Facial Descriptor Extractor & Matching Engine
- * Backed by Spatial Landmark Histogram Analysis & Cosine Similarity
+ * PRODUCTION-GRADE UNIFIED 128-DIMENSIONAL FACIAL BIOMETRIC MATCHING ENGINE
+ * 
+ * Powered by TensorFlow.js FaceNet Deep Neural Embeddings (128D Float32 vectors).
+ * Used IDENTICALLY for both Registration and Verification.
+ * 
+ * THRESHOLD SPECIFICATION (STRICT 93.0% MATCH MANDATE):
+ * - REQUIRED_MATCH_PERCENTAGE       = 93.0% (Must match at least 93.0% to proceed)
+ * - FACE_MATCH_THRESHOLD_COSINE    = 0.93  (Cosine similarity must be >= 0.93)
+ * - FACE_MATCH_THRESHOLD_EUCLIDEAN = 0.374 (Euclidean distance must be <= 0.374)
  */
 
+const REQUIRED_MATCH_PERCENTAGE       = 93.0;
+const FACE_MATCH_THRESHOLD_COSINE    = 0.93;
+const FACE_MATCH_THRESHOLD_EUCLIDEAN = 0.374;
+
 /**
- * Extracts a normalized 128-element floating-point facial biometric template array
- * @param {Array<number>|string} input - Either a raw pixel descriptor array or base64 image string
- * @returns {Array<number>} 128-element normalized feature vector
+ * Validates and normalizes a 128D FaceNet embedding vector with full IEEE 754 precision.
+ * Stricter validation prevents corrupted or maliciously crafted embeddings from entering the pipeline.
+ *
+ * @param {Array<number>} input - 128-element descriptor array
+ * @returns {Array<number>} L2 Normalized 128-element float array
  */
-function extract128DFacialDescriptor(input) {
-  const descriptorLength = 128;
-  const result = new Array(descriptorLength).fill(0);
-
-  if (Array.isArray(input) && input.length >= 64) {
-    // Expand 64-bin array into 128-dimensional landmark representation
-    for (let i = 0; i < descriptorLength; i++) {
-      const srcIdx = i % input.length;
-      const factor = Math.sin((i + 1) * 0.1) * 0.1 + 1.0;
-      result[i] = input[srcIdx] * factor;
-    }
-  } else if (typeof input === 'string') {
-    // Extract 128D descriptor from base64 image payload
-    try {
-      const raw = input.replace(/^data:image\/\w+;base64,/, '');
-      const buf = Buffer.from(raw, 'base64');
-      const step = Math.max(1, Math.floor(buf.length / 2000));
-
-      for (let i = 0; i < buf.length; i += step) {
-        const bin = (buf[i] + Math.floor(i / 13)) % descriptorLength;
-        result[bin] += buf[i];
-      }
-    } catch (err) {
-      for (let i = 0; i < descriptorLength; i++) {
-        result[i] = Math.sin(i) * 0.5 + 0.5;
-      }
-    }
+function normalize128DFacialDescriptor(input) {
+  if (!input) {
+    throw new Error('Invalid face embedding payload: vector is null or undefined.');
   }
 
-  // L2 Normalize vector
-  const norm = Math.sqrt(result.reduce((sum, v) => sum + v * v, 0)) || 1;
-  return result.map((v) => Math.round((v / norm) * 10000) / 10000);
+  // Handle BSON / Object array conversion if stored as key-value pairs
+  let rawArr = input;
+  if (!Array.isArray(rawArr) && typeof rawArr === 'object') {
+    rawArr = Object.values(rawArr);
+  }
+
+  if (!Array.isArray(rawArr) || rawArr.length < 64) {
+    throw new Error(`Invalid face embedding payload: expected 128-element numeric array, received ${Array.isArray(rawArr) ? rawArr.length : typeof rawArr}`);
+  }
+
+  // Convert to clean numbers & slice to 128
+  const vec = new Array(128).fill(0);
+  for (let i = 0; i < 128; i++) {
+    const val = typeof rawArr[i] === 'string' ? parseFloat(rawArr[i]) : Number(rawArr[i]);
+    vec[i] = typeof val === 'number' && Number.isFinite(val) ? val : 0;
+  }
+
+  // Compute L2 norm
+  let sumSq = 0;
+  for (let i = 0; i < 128; i++) {
+    sumSq += vec[i] * vec[i];
+  }
+
+  if (sumSq === 0) {
+    throw new Error('Invalid face embedding payload: zero vector detected.');
+  }
+
+  const norm = Math.sqrt(sumSq);
+
+  // L2 Normalize without precision loss (full IEEE 754 numbers)
+  return vec.map((v) => v / norm);
 }
 
 /**
- * Computes Cosine Similarity and Euclidean Distance between two 128D facial descriptors
- * @param {Array<number>} descA 
- * @param {Array<number>} descB 
- * @returns {{ similarity: number, distance: number, confidence: number }}
+ * Computes L2 Euclidean Distance and Cosine Similarity between two 128D FaceNet descriptors
+ * Enforces strict 93.0% match cutoff.
+ * 
+ * @param {Array<number>} descA - Live capture 128D descriptor
+ * @param {Array<number>} descB - Registered 128D descriptor stored in MongoDB
+ * @returns {{ isMatch: boolean, euclideanDistance: number, cosineSimilarity: number, confidencePercentage: number, diagnostic: object }}
  */
 function compareFacialDescriptors(descA, descB) {
-  if (!descA || !descB || descA.length === 0 || descB.length === 0) {
-    return { similarity: 0, distance: 1.0, confidence: 0 };
+  if (!descA || !descB) {
+    return {
+      isMatch: false,
+      euclideanDistance: 2.0,
+      cosineSimilarity: 0,
+      confidencePercentage: 0,
+      diagnostic: { error: 'One or both face descriptors are missing' }
+    };
   }
 
-  // Ensure both vectors are 128D
-  const vecA = extract128DFacialDescriptor(descA);
-  const vecB = extract128DFacialDescriptor(descB);
+  let vecA, vecB;
+  try {
+    vecA = normalize128DFacialDescriptor(descA);
+    vecB = normalize128DFacialDescriptor(descB);
+  } catch (err) {
+    return {
+      isMatch: false,
+      euclideanDistance: 2.0,
+      cosineSimilarity: 0,
+      confidencePercentage: 0,
+      diagnostic: { error: err.message }
+    };
+  }
 
+  let sumSqDiff = 0;
   let dotProduct = 0;
   let normA = 0;
   let normB = 0;
-  let sumSqDiff = 0;
 
   for (let i = 0; i < 128; i++) {
+    const diff = vecA[i] - vecB[i];
+    sumSqDiff += diff * diff;
+
     dotProduct += vecA[i] * vecB[i];
     normA += vecA[i] * vecA[i];
     normB += vecB[i] * vecB[i];
-
-    const diff = vecA[i] - vecB[i];
-    sumSqDiff += diff * diff;
   }
 
-  const similarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB) || 1);
-  const distance = Math.sqrt(sumSqDiff);
-  
-  // Calculate true un-clamped similarity percentage
-  const rawSimilarityPct = Math.round(similarity * 100 * 10) / 10;
-  const confidence = Math.max(0, Math.min(99.4, rawSimilarityPct));
+  const euclideanDistance = Math.sqrt(sumSqDiff);
+  const cosineSimilarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB) || 1.0);
+
+  const rawConfidence = Math.round(Math.max(0, Math.min(99.4, cosineSimilarity * 100)) * 10) / 10;
+
+  // STRICT 93.0% MATCH CONDITION:
+  // Cosine similarity MUST be >= 0.93 (Match score >= 93.0%)
+  // Euclidean distance MUST be <= 0.374
+  const isMatch = (
+    cosineSimilarity >= FACE_MATCH_THRESHOLD_COSINE &&
+    euclideanDistance <= FACE_MATCH_THRESHOLD_EUCLIDEAN &&
+    rawConfidence >= REQUIRED_MATCH_PERCENTAGE
+  );
 
   return {
-    similarity: Math.round(similarity * 10000) / 10000,
-    distance: Math.round(distance * 10000) / 10000,
-    confidence
+    isMatch,
+    euclideanDistance: Math.round(euclideanDistance * 1000) / 1000,
+    cosineSimilarity: Math.round(cosineSimilarity * 1000) / 1000,
+    confidencePercentage: rawConfidence,
+    requiredThresholdPercentage: REQUIRED_MATCH_PERCENTAGE,
+    thresholds: {
+      requiredMatchPercentage: REQUIRED_MATCH_PERCENTAGE,
+      maxEuclideanDistance: FACE_MATCH_THRESHOLD_EUCLIDEAN,
+      minCosineSimilarity: FACE_MATCH_THRESHOLD_COSINE
+    },
+    diagnostic: {
+      vecALength: vecA.length,
+      vecBLength: vecB.length,
+      normA: Math.round(Math.sqrt(normA) * 1000) / 1000,
+      normB: Math.round(Math.sqrt(normB) * 1000) / 1000
+    }
   };
 }
 
 module.exports = {
-  extract128DFacialDescriptor,
+  REQUIRED_MATCH_PERCENTAGE,
+  FACE_MATCH_THRESHOLD_EUCLIDEAN,
+  FACE_MATCH_THRESHOLD_COSINE,
+  normalize128DFacialDescriptor,
   compareFacialDescriptors
 };

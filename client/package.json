@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@fontsource/manrope": "^5.3.0",
+    "@vladmandic/face-api": "^1.7.15",
     "axios": "^1.19.0",
     "date-fns": "^4.4.0",
     "firebase": "^12.17.0",
