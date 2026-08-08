@@ -32,6 +32,7 @@ import Neobank from './pages/Neobank';
 import NotFound from './pages/NotFound';
 import BlockchainHealth from './pages/BlockchainHealth';
 import IdentityVerification from './pages/IdentityVerification';
+import PublicVerify from './pages/PublicVerify';
 
 /**
  * ProtectedRoute — Redirects to /login if user is not authenticated.
@@ -66,6 +67,7 @@ function App() {
             {/* 1. BEAUTIFUL LANDING PAGE (Application Start & Post-Logout Landing) */}
             <Route element={<PublicLayout />}>
               <Route path="/" element={<Landing />} />
+              <Route path="/verify-hash" element={<PublicVerify />} />
             </Route>
 
             {/* Standalone Neobank Route */}

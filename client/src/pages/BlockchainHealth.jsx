@@ -237,6 +237,38 @@ const BlockchainHealth = () => {
             ))}
           </div>
 
+          {/* Faucet Refill Banner */}
+          <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg font-bold shrink-0">
+                ⛽
+              </div>
+              <div>
+                <p className="text-xs font-bold text-amber-900">Relayer Wallet Faucet Refill</p>
+                <p className="text-[11px] text-amber-700 font-mono">0xeF48e1438dd9378022210E80D939a0f09E3aB7FE</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText('0xeF48e1438dd9378022210E80D939a0f09E3aB7FE');
+                  toast.success('Relayer address copied!');
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 font-semibold text-xs hover:bg-amber-100 transition-colors shadow-xs"
+              >
+                Copy Address
+              </button>
+              <a
+                href="https://faucet.polygon.technology"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors shadow-xs flex items-center gap-1"
+              >
+                Open Amoy Faucet ↗
+              </a>
+            </div>
+          </div>
+
           {/* Setup Guide if critical checks fail */}
           {report.summary.failed > 0 && (
             <div className="mt-8 p-6 rounded-2xl bg-[#FEF3C7] border border-[#FDE68A] text-[#2E2A26]">

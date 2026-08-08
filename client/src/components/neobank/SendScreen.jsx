@@ -136,6 +136,33 @@ export default function SendScreen({ account, onComplete }) {
             />
           </div>
 
+          {/* Quick-select address book contacts */}
+          <div className="space-y-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Quick Select Contacts</span>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {[
+                { name: 'Ada Lovelace', handle: '@ada', addr: 'ada@example.com', avatar: '👩‍💻' },
+                { name: 'Satoshi N.', handle: '@satoshi', addr: '0x320a...4e06', avatar: '⚡' },
+                { name: 'Vitalik B.', handle: '@vitalik', addr: '0x71C7...8976F', avatar: '🦄' },
+                { name: 'Alex M.', handle: '@alex', addr: 'alex@polygon.tech', avatar: '👨‍💼' },
+              ].map(c => (
+                <button
+                  key={c.handle}
+                  type="button"
+                  onClick={() => setRecipient(c.addr)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs shrink-0 transition-all ${
+                    recipient === c.addr
+                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-semibold'
+                      : 'bg-slate-900 border-white/10 text-slate-300 hover:border-white/30'
+                  }`}
+                >
+                  <span>{c.avatar}</span>
+                  <span className="font-mono text-[11px]">{c.handle}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="p-3.5 rounded-xl bg-slate-900 border border-white/10 space-y-1">
             <div className="flex justify-between items-center text-xs">
               <label className="font-medium text-slate-300">Amount (USD)</label>

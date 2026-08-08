@@ -15,6 +15,8 @@ import DepositScreen from '../components/neobank/DepositScreen';
 import WithdrawScreen from '../components/neobank/WithdrawScreen';
 import HistoryScreen from '../components/neobank/HistoryScreen';
 import KycScreen from '../components/neobank/KycScreen';
+import NeobankAnalytics from '../components/neobank/NeobankAnalytics';
+import TxReceiptModal from '../components/neobank/TxReceiptModal';
 import { getNeobankAccount } from '../api/neobankApi';
 
 /* ────────────────────────────────────────────────────────────────
@@ -70,13 +72,14 @@ const T = {
    NAV TABS
 ──────────────────────────────────────────────────────────────── */
 const NAV_TABS = [
-  { id: 'home',     label: 'Wallet',  icon: Wallet        },
-  { id: 'cash-in',  label: 'Cash-In', icon: QrCode        },
-  { id: 'send',     label: 'Send',    icon: Send          },
-  { id: 'deposit',  label: 'Top-Up',  icon: Building2     },
-  { id: 'withdraw', label: 'Payout',  icon: ArrowDownLeft },
-  { id: 'history',  label: 'History', icon: History       },
-  { id: 'kyc',      label: 'KYC',     icon: ShieldCheck   },
+  { id: 'home',      label: 'Wallet',    icon: Wallet        },
+  { id: 'cash-in',   label: 'Cash-In',   icon: QrCode        },
+  { id: 'send',      label: 'Send',      icon: Send          },
+  { id: 'deposit',   label: 'Top-Up',    icon: Building2     },
+  { id: 'withdraw',  label: 'Payout',    icon: ArrowDownLeft },
+  { id: 'analytics', label: 'Analytics', icon: TrendingUp    },
+  { id: 'history',   label: 'History',   icon: History       },
+  { id: 'kyc',       label: 'KYC',       icon: ShieldCheck   },
 ];
 
 /* ────────────────────────────────────────────────────────────────
@@ -114,8 +117,20 @@ const StatusPill = ({ label, variant = 'green', className = '' }) => {
 const BalanceCard = ({ account }) => {
   const [hidden, setHidden] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [currency, setCurrency] = useState('USD');
   const addr = account?.walletAddress || '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
   const shortAddr = `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+
+  const rawBalance = parseFloat((account?.balance || '2450.00').toString().replace(/,/g, ''));
+
+  const getFormattedBalance = () => {
+    switch (currency) {
+      case 'EUR': return `€${(rawBalance * 0.92).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      case 'INR': return `₹${(rawBalance * 83.50).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      case 'USDC': return `${rawBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      default: return `$${rawBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+  };
 
   const copyAddr = () => {
     navigator.clipboard.writeText(addr).catch(() => {});
@@ -138,7 +153,7 @@ const BalanceCard = ({ account }) => {
 
       <div style={{ padding: '20px' }}>
         {/* Header row */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -148,12 +163,12 @@ const BalanceCard = ({ account }) => {
             </div>
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: T.greenText }}>
-                USD Balance
+                Wallet Balance
               </p>
               <p className="text-[10px]" style={{ color: T.textTertiary }}>Settled in USDC</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <StatusPill label="Polygon" variant="blue" />
             <button
               onClick={() => setHidden(h => !h)}
@@ -168,14 +183,33 @@ const BalanceCard = ({ account }) => {
           </div>
         </div>
 
+        {/* Currency Switcher Pill Bar */}
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[11px] font-medium" style={{ color: T.textSecondary }}>
+            Available Balance
+          </p>
+          <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+            {['USD', 'USDC', 'EUR', 'INR'].map((c) => (
+              <button
+                key={c}
+                onClick={() => setCurrency(c)}
+                className={`px-1.5 py-0.5 text-[9px] font-bold rounded uppercase transition-all ${
+                  currency === c
+                    ? 'bg-white text-gray-900 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Balance — dominant type */}
-        <p className="text-[11px] font-medium mb-1" style={{ color: T.textSecondary }}>
-          Available Balance
-        </p>
         <div className="flex items-baseline gap-2 mb-4">
           <span
             style={{
-              fontSize: '36px',
+              fontSize: '34px',
               fontWeight: 800,
               lineHeight: 1,
               color: T.textPrimary,
@@ -183,9 +217,9 @@ const BalanceCard = ({ account }) => {
               letterSpacing: '-0.02em',
             }}
           >
-            {hidden ? '••••••' : `$${account?.balance || '2,450.00'}`}
+            {hidden ? '••••••' : getFormattedBalance()}
           </span>
-          <span className="text-sm font-semibold" style={{ color: T.textSecondary }}>USD</span>
+          <span className="text-xs font-bold font-mono" style={{ color: T.textSecondary }}>{currency}</span>
         </div>
 
         {/* KYC status */}
@@ -358,7 +392,7 @@ const VirtualBankCard = ({ onNavigate }) => (
    RECENT TRANSACTIONS
    +amounts → green · -amounts → red
 ──────────────────────────────────────────────────────────────── */
-const RecentTxns = ({ account, onViewAll }) => {
+const RecentTxns = ({ account, onViewAll, onSelectTx }) => {
   const transactions = account?.transactions || [
     { id: 't1', title: 'Sent to @ada',         amount: '-$150.00',   status: 'Completed', date: '2 mins ago',   icon: 'send' },
     { id: 't2', title: '7-Eleven Cash Top-Up', amount: '+$500.00',   status: 'Completed', date: 'Yesterday',    icon: 'cash' },
@@ -404,7 +438,8 @@ const RecentTxns = ({ account, onViewAll }) => {
         return (
           <div
             key={tx.id}
-            className="flex items-center justify-between px-5 py-3.5 transition-colors cursor-default"
+            onClick={() => onSelectTx && onSelectTx(tx)}
+            className="flex items-center justify-between px-5 py-3.5 transition-colors cursor-pointer"
             style={{ borderBottom: i < transactions.slice(0, 5).length - 1 ? `1px solid ${T.border}` : 'none' }}
             onMouseEnter={e => { e.currentTarget.style.background = T.surfaceAlt; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
@@ -675,16 +710,19 @@ export default function Neobank() {
      Other tabs → their screen component inside a clean white card. */
   const isIdleState = activeTab === 'home';
 
+  const [selectedTx, setSelectedTx] = useState(null);
+
   const renderDesktopCentre = () => {
     if (isIdleState) return <CoinMascot />;
     switch (activeTab) {
-      case 'cash-in':  return <CashInScreen   account={account} />;
-      case 'send':     return <SendScreen     account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
-      case 'deposit':  return <DepositScreen  account={account} />;
-      case 'withdraw': return <WithdrawScreen account={account} />;
-      case 'history':  return <HistoryScreen />;
-      case 'kyc':      return <KycScreen      account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
-      default:         return <CoinMascot />;
+      case 'cash-in':   return <CashInScreen   account={account} />;
+      case 'send':      return <SendScreen     account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
+      case 'deposit':   return <DepositScreen  account={account} />;
+      case 'withdraw':  return <WithdrawScreen account={account} />;
+      case 'analytics': return <NeobankAnalytics />;
+      case 'history':   return <HistoryScreen />;
+      case 'kyc':       return <KycScreen      account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
+      default:          return <CoinMascot />;
     }
   };
 
@@ -895,7 +933,7 @@ export default function Neobank() {
                 Live Feed
               </p>
               {loading  && <Skeleton />}
-              {!loading && <RecentTxns account={account} onViewAll={() => setActiveTab('history')} />}
+              {!loading && <RecentTxns account={account} onViewAll={() => setActiveTab('history')} onSelectTx={setSelectedTx} />}
             </div>
 
             <NetworkStatus />
@@ -915,6 +953,14 @@ export default function Neobank() {
           </aside>
         </div>
       </div>
+
+      {/* Transaction Receipt Modal */}
+      {selectedTx && (
+        <TxReceiptModal
+          transaction={selectedTx}
+          onClose={() => setSelectedTx(null)}
+        />
+      )}
     </>
   );
 }
