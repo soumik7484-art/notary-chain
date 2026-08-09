@@ -14,7 +14,11 @@ const SEV = {
   info:   { bg: 'bg-emerald-50',border: 'border-emerald-200',text: 'text-emerald-700',dot: 'bg-emerald-400'},
 };
 
+import { useAuth } from '../../hooks/useAuth';
+import { saveDocumentHistory } from '../../utils/documentHistory';
+
 const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
+  const { user }                  = useAuth();
   const [file, setFile]           = useState(null);
   const [title, setTitle]         = useState('');
   const [category, setCategory]   = useState('contract');
@@ -60,6 +64,8 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
 
       const data = res.data?.data || res.data;
       setResult(data);
+
+      saveDocumentHistory(user, data, title, category);
 
       if (data.aiAnalysis) {
         toast.success('Document uploaded & AI analysis complete!', { id: toastId });
