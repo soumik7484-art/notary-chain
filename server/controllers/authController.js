@@ -11,6 +11,7 @@ const a = require('../middleware/auditLogger');
 const resU = require('../utils/apiResponse');
 const err = require('../utils/apiError');
 const faceService = require('../services/faceRecognitionService');
+const logger = require('../utils/logger');
 
 // Fallback memory store when MongoDB offline
 const mongoDbFallbackStore = new Map();
