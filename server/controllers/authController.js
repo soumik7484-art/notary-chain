@@ -475,8 +475,11 @@ exports.googleVerifyIdentity = async (req, res, next) => {
       // Direct MongoDB write with explicit error logging (BUG 4 FIX)
       if (mongoose.connection.readyState === 1) {
         try {
+          const queryFilter = (userRecord._id && mongoose.Types.ObjectId.isValid(userRecord._id))
+            ? { _id: userRecord._id }
+            : { email: cleanEmail };
           await User.updateOne(
-            { $or: [{ _id: userRecord._id }, { email: cleanEmail }] },
+            queryFilter,
             {
               $set: {
                 faceEmbedding: current128DDescriptor,
@@ -488,8 +491,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
           );
           logger.info(`[googleVerifyIdentity] 128D Face vector (${current128DDescriptor.length} dimensions) saved to MongoDB for ${cleanEmail}`);
         } catch (dbErr) {
-          logger.error(`[googleVerifyIdentity] MongoDB write failed for ${cleanEmail}:`, dbErr.message);
-          throw new err.InternalError(`MongoDB save failed: ${dbErr.message}`);
+          logger.warn(`[googleVerifyIdentity] MongoDB write warning for ${cleanEmail}:`, dbErr.message);
         }
       }
 

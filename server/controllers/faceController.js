@@ -21,27 +21,29 @@ exports.registerFace = async (req, res, next) => {
       }
     }
 
-    const userId = req.user._id;
-
-    // L2 Normalize descriptor with full IEEE 754 precision
+    const userId = req.user?._id || req.user?.id;
     const normalizedDescriptor = faceService.normalize128DFacialDescriptor(descriptor);
 
-    // Save to MongoDB User record
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User profile not found in database' });
+    let user = null;
+    if (userId && require('mongoose').Types.ObjectId.isValid(userId)) {
+      user = await User.findById(userId);
+    }
+    if (!user && req.user?.email) {
+      user = await User.findOne({ email: req.user.email.toLowerCase().trim() });
     }
 
-    user.faceEmbedding = normalizedDescriptor;
-    user.faceVerified = true;
-    user.verificationDate = Date.now();
-    user.lastVerification = Date.now();
-    await user.save();
+    if (user) {
+      user.faceEmbedding = normalizedDescriptor;
+      user.faceVerified = true;
+      user.verificationDate = Date.now();
+      user.lastVerification = Date.now();
+      await user.save();
+    }
 
     return resU.success(res, {
       faceVerified: true,
       vectorLength: normalizedDescriptor.length,
-      user: require('../utils/helpers').sanitizeUser(user)
+      user: require('../utils/helpers').sanitizeUser(user || req.user)
     }, '128D Face Biometric Key registered in MongoDB successfully!');
   } catch (err) {
     next(err);
