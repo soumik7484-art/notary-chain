@@ -5,8 +5,10 @@ import {
   ArrowLeft, CreditCard, QrCode, Building2, ArrowUpRight,
   ArrowDownLeft, History, ShieldCheck, Zap, CheckCircle2,
   Copy, ChevronRight, TrendingUp, Eye, EyeOff, Check,
-  Send, Wallet, Activity
+  Send, Wallet, Activity, RefreshCw
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useAuth } from '../hooks/useAuth';
 import IPhoneFrame from '../components/neobank/IPhoneFrame';
 import HomeScreen from '../components/neobank/HomeScreen';
 import CashInScreen from '../components/neobank/CashInScreen';
@@ -115,13 +117,77 @@ const StatusPill = ({ label, variant = 'green', className = '' }) => {
    Premium white card with green top-border accent stripe
 ──────────────────────────────────────────────────────────────── */
 const BalanceCard = ({ account }) => {
+  const { user, updateUser } = useAuth();
   const [hidden, setHidden] = useState(false);
   const [copied, setCopied] = useState(false);
   const [currency, setCurrency] = useState('USD');
-  const addr = account?.walletAddress || '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
-  const shortAddr = `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+  const [liveBal, setLiveBal] = useState(null);
+  const [syncing, setSyncing] = useState(false);
 
-  const rawBalance = parseFloat((account?.balance || '2450.00').toString().replace(/,/g, ''));
+  const addr = user?.walletAddress || localStorage.getItem('web3_connected_wallet') || account?.walletAddress || '';
+  const shortAddr = addr ? `${addr.slice(0, 8)}...${addr.slice(-6)}` : 'Not Connected';
+
+  const fetchRealBalance = async (walletAddress) => {
+    if (!walletAddress) return;
+    setSyncing(true);
+    try {
+      if (window.ethereum) {
+        const hex = await window.ethereum.request({ method: 'eth_getBalance', params: [walletAddress, 'latest'] });
+        const wei = BigInt(hex);
+        const pol = Number(wei) / 1e18;
+        setLiveBal({ pol: pol.toFixed(4), usd: (pol * 0.42).toFixed(2) });
+        setSyncing(false);
+        return;
+      }
+    } catch (e) {}
+
+    try {
+      const res = await fetch('https://polygon-amoy-bor-rpc.publicnode.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getBalance', params: [walletAddress, 'latest'], id: 1 })
+      });
+      const data = await res.json();
+      if (data?.result) {
+        const wei = BigInt(data.result);
+        const pol = Number(wei) / 1e18;
+        setLiveBal({ pol: pol.toFixed(4), usd: (pol * 0.42).toFixed(2) });
+      }
+    } catch (e) {}
+    setSyncing(false);
+  };
+
+  useEffect(() => {
+    if (addr) fetchRealBalance(addr);
+  }, [addr]);
+
+  const handleConnectWallet = async () => {
+    if (!window.ethereum) {
+      toast.error('MetaMask extension not found. Please install MetaMask.');
+      return;
+    }
+    setSyncing(true);
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts && accounts.length > 0) {
+        const selectedAddr = accounts[0];
+        localStorage.setItem('web3_connected_wallet', selectedAddr);
+        updateUser({ ...user, walletAddress: selectedAddr, isWeb3User: true });
+        await fetchRealBalance(selectedAddr);
+        toast.success(`MetaMask Connected: ${selectedAddr.substring(0, 6)}...${selectedAddr.slice(-4)}`);
+      }
+    } catch (err) {
+      toast.error('Failed to connect MetaMask');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const rawBalance = liveBal
+    ? parseFloat(liveBal.usd)
+    : addr
+    ? 0.00
+    : parseFloat((account?.balance || '2450.00').toString().replace(/,/g, ''));
 
   const getFormattedBalance = () => {
     switch (currency) {
@@ -133,6 +199,7 @@ const BalanceCard = ({ account }) => {
   };
 
   const copyAddr = () => {
+    if (!addr) return;
     navigator.clipboard.writeText(addr).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -165,11 +232,20 @@ const BalanceCard = ({ account }) => {
               <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: T.greenText }}>
                 Wallet Balance
               </p>
-              <p className="text-[10px]" style={{ color: T.textTertiary }}>Settled in USDC</p>
+              <p className="text-[10px]" style={{ color: T.textTertiary }}>
+                {addr ? 'Live Web3 Wallet Balance' : 'Settled in USDC'}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <StatusPill label="Polygon" variant="blue" />
+            <button
+              onClick={handleConnectWallet}
+              disabled={syncing}
+              className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-[#F0FAF5] hover:bg-[#D9F2E6] border border-[#B3E4CC] text-[#2D6A4F] transition-all flex items-center gap-1"
+            >
+              <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
+              {addr ? 'Sync Web3' : 'Connect Wallet'}
+            </button>
             <button
               onClick={() => setHidden(h => !h)}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-gray-100"
@@ -222,11 +298,18 @@ const BalanceCard = ({ account }) => {
           <span className="text-xs font-bold font-mono" style={{ color: T.textSecondary }}>{currency}</span>
         </div>
 
+        {liveBal && (
+          <div className="mb-3 px-2.5 py-1 rounded-lg bg-[#F0FAF5] border border-[#B3E4CC] text-[11px] font-bold text-[#2D6A4F] flex items-center justify-between">
+            <span>On-Chain POL Balance:</span>
+            <span className="font-mono">{liveBal.pol} POL</span>
+          </div>
+        )}
+
         {/* KYC status */}
         <div className="flex items-center gap-2 mb-5">
           <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: T.green }} />
           <p className="text-[11px] font-semibold" style={{ color: T.greenText }}>
-            KYC {account?.kycStatus || 'ACTIVE'} · Custodial OMS
+            {addr ? 'Web3 Wallet Connected · Polygon Amoy' : 'KYC ACTIVE · Custodial OMS'}
           </p>
         </div>
 
@@ -393,11 +476,13 @@ const VirtualBankCard = ({ onNavigate }) => (
    +amounts → green · -amounts → red
 ──────────────────────────────────────────────────────────────── */
 const RecentTxns = ({ account, onViewAll, onSelectTx }) => {
-  const transactions = account?.transactions || [
-    { id: 't1', title: 'Sent to @ada',         amount: '-$150.00',   status: 'Completed', date: '2 mins ago',   icon: 'send' },
-    { id: 't2', title: '7-Eleven Cash Top-Up', amount: '+$500.00',   status: 'Completed', date: 'Yesterday',    icon: 'cash' },
-    { id: 't3', title: 'ACH Direct Deposit',   amount: '+$2,100.00', status: 'Completed', date: 'Jul 28, 2026', icon: 'bank' },
-  ];
+  const { user } = useAuth();
+  const activeAddr = user?.walletAddress || localStorage.getItem('web3_connected_wallet') || '';
+
+  // If a Web3 wallet is connected, only show real transactions (or empty array if no transactions for that wallet)
+  const transactions = activeAddr
+    ? (account?.web3Transactions || [])
+    : (account?.transactions || []);
 
   /* icon visual: outgoing=red-tinted, incoming=green-tinted, bank=blue-tinted */
   const iconMeta = {
@@ -405,6 +490,29 @@ const RecentTxns = ({ account, onViewAll, onSelectTx }) => {
     cash: { label: '↙', bg: T.greenLight, color: T.green },
     bank: { label: '🏦', bg: T.blueLight, color: T.blue  },
   };
+
+  if (transactions.length === 0) {
+    return (
+      <div
+        style={{
+          background: T.surface,
+          borderRadius: T.radiusLg,
+          border: `1px solid ${T.border}`,
+          boxShadow: T.shadowSm,
+          padding: '24px 16px',
+          textAlign: 'center'
+        }}
+      >
+        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2 text-base">
+          📜
+        </div>
+        <p className="text-xs font-bold" style={{ color: T.textPrimary }}>No Transactions Yet</p>
+        <p className="text-[11px] mt-1" style={{ color: T.textSecondary }}>
+          {activeAddr ? 'Your connected Web3 wallet has no Neobank transactions recorded.' : 'No recent transactions.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div

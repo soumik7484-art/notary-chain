@@ -9,7 +9,7 @@ import FloatingChatbot from '../components/common/FloatingChatbot';
 import { useAuth } from '../hooks/useAuth';
 
 const DashboardLayout = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, needsVerification, isLoading } = useAuth();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -27,6 +27,10 @@ const DashboardLayout = () => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (needsVerification) {
+    return <Navigate to="/verify-identity" state={{ from: location }} replace />;
   }
 
   return (

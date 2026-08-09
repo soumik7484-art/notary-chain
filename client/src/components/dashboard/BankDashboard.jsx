@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ShieldAlert, CheckCircle2, Clock, Eye, FileText, ArrowUpRight } from 'lucide-react';
 import { AnalyticsContent } from '../admin/Analytics';
+import Web3WalletSetupBanner from '../common/Web3WalletSetupBanner';
 
 const BankDashboard = () => {
   return (
@@ -13,6 +14,9 @@ const BankDashboard = () => {
           Review, verify, and validate incoming institutional document requests
         </p>
       </div>
+
+      {/* ── Web3 Wallet Setup Prompt ── */}
+      <Web3WalletSetupBanner />
 
       {/* ── Metric Cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

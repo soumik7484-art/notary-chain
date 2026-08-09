@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import DocumentUpload from '../documents/DocumentUpload';
 import InteractiveNeobankPhone from '../neobank/InteractiveNeobankPhone';
+import Web3WalletSetupBanner from '../common/Web3WalletSetupBanner';
 import { useAuth } from '../../hooks/useAuth';
 import { getDocumentList } from '../../api/documentApi';
 
@@ -148,6 +149,9 @@ const CompanyDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* ── Web3 Wallet Setup Prompt ── */}
+      <Web3WalletSetupBanner />
 
       {/* ── Divided Section Selector Bar (Clean Segmented Tabs) ── */}
       <div className="bg-white border border-[#E9E4DD] p-1.5 rounded-xl shadow-xs flex items-center gap-1 overflow-x-auto">

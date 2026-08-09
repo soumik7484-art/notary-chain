@@ -22,6 +22,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(extractDeviceInfo);
 
+// Connect DB asynchronously without blocking server export
+connectDB().catch(err => logger.warn('DB connect warning:', err));
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date(), uptime: process.uptime(), environment: env.NODE_ENV });
 });
@@ -40,17 +43,11 @@ app.use('/api/neobank', require('./routes/neobankRoutes'));
 app.use('/api/face', require('./routes/faceRoutes'));
 app.use('/api/blockchain', require('./routes/blockchainRoutes'));
 
-
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 app.use(errorHandler);
 
-const start = async () => {
-  try {
-    await connectDB();
-    app.listen(env.PORT, () => logger.info(`Server running on port ${env.PORT}`));
-  } catch (e) {
-    logger.error('Startup error', e);
-    process.exit(1);
-  }
-};
-start();
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+  app.listen(env.PORT, () => logger.info(`Server running on port ${env.PORT}`));
+}
+
+module.exports = app;

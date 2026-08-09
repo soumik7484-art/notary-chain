@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? '/api'
+    : 'https://server-lovat-gamma-13.vercel.app/api');
+
 const axiosInstance = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
 });
 
 axiosInstance.interceptors.request.use((config) => {
@@ -9,7 +14,9 @@ axiosInstance.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  config.headers['X-Screen-Resolution'] = `${window.screen.width}x${window.screen.height}`;
+  if (typeof window !== 'undefined') {
+    config.headers['X-Screen-Resolution'] = `${window.screen.width}x${window.screen.height}`;
+  }
   return config;
 }, (error) => Promise.reject(error));
 
@@ -22,7 +29,7 @@ axiosInstance.interceptors.response.use(
       try {
         const refresh = localStorage.getItem('refreshToken');
         if (refresh) {
-          const { data } = await axios.post('/api/auth/refresh-token', { token: refresh });
+          const { data } = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { token: refresh });
           if (data.accessToken) {
             localStorage.setItem('accessToken', data.accessToken);
             axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;

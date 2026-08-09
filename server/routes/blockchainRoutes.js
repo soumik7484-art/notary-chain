@@ -75,4 +75,19 @@ router.get('/transaction/:txHash', protect, async (req, res, next) => {
   }
 });
 
+/**
+ * GET /api/blockchain/balance/:address
+ * Retrieve real on-chain MATIC and USDC balance.
+ */
+router.get('/balance/:address', protect, async (req, res, next) => {
+  try {
+    const walletService = require('../services/walletService');
+    const balance = await walletService.getBalance(req.params.address);
+    resU.success(res, balance, 'Wallet balance fetched successfully');
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
+

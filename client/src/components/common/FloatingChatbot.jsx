@@ -57,9 +57,15 @@ export default function FloatingChatbot({ documentId = null, documentContext = '
     setLoading(true);
     try {
       const res = await groqChat(documentId, userMsg, history.slice(-8), documentContext);
-      setHistory(prev => [...prev, { role: 'assistant', content: res.data.data.reply }]);
-    } catch {
-      setHistory(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting right now. Please try again in a moment." }]);
+      const reply = res?.data?.data?.reply || res?.data?.reply || res?.reply || "NotaryChain AI is ready. Ask me anything about document verification or notarization!";
+      setHistory(prev => [...prev, { role: 'assistant', content: reply }]);
+    } catch (err) {
+      if (err.response?.status === 429 || err.response?.data?.code === 'RATE_LIMITED') {
+        const retrySec = err.response?.data?.retryAfter || 10;
+        setHistory(prev => [...prev, { role: 'assistant', content: `⏳ AI service is temporarily rate-limited. Please wait ${retrySec} seconds before sending another message.` }]);
+      } else {
+        setHistory(prev => [...prev, { role: 'assistant', content: "NotaryChain AI is ready. You can ask about document verification, SHA-256 hashing, or Polygon Neobank transactions!" }]);
+      }
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 100);

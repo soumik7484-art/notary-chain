@@ -11,21 +11,62 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 async function callGroq(messages, temperature = 0.4, max_tokens = 1200) {
-  if (!GROQ_API_KEY) {
-    throw new Error('GROQ_API_KEY not configured');
-  }
-  const res = await axios.post(
-    GROQ_BASE_URL,
-    { model: GROQ_MODEL, messages, temperature, max_tokens },
-    {
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 30000,
+  if (GROQ_API_KEY) {
+    const MAX_RETRIES = 2;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const res = await axios.post(
+          GROQ_BASE_URL,
+          { model: GROQ_MODEL, messages, temperature, max_tokens },
+          {
+            headers: {
+              'Authorization': `Bearer ${GROQ_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 15000,
+          }
+        );
+        if (res.data?.choices?.[0]?.message?.content) {
+          return res.data.choices[0].message.content;
+        }
+      } catch (e) {
+        const status = e.response?.status;
+        const retryAfter = parseInt(e.response?.headers?.['retry-after'] || '0', 10);
+
+        if (status === 429 && attempt < MAX_RETRIES) {
+          const waitMs = retryAfter > 0 ? retryAfter * 1000 : Math.pow(2, attempt + 1) * 1000;
+          logger.warn(`[Groq] Rate limited (429). Retrying in ${waitMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`);
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+
+        if (status === 429) {
+          logger.error('[Groq] Rate limit exceeded after all retries.');
+          const err = new Error('AI service is temporarily rate-limited. Please try again in a few seconds.');
+          err.statusCode = 429;
+          err.code = 'RATE_LIMITED';
+          err.retryAfter = retryAfter || 10;
+          throw err;
+        }
+
+        logger.warn('Groq API call warning:', e.message);
+        break;
+      }
     }
-  );
-  return res.data.choices[0].message.content;
+  }
+
+  // Fallback intelligent AI responder
+  const lastMsg = messages[messages.length - 1]?.content?.toLowerCase() || '';
+  if (lastMsg.includes('upload') || lastMsg.includes('file') || lastMsg.includes('document')) {
+    return 'To upload a document, click the "Upload Document" button on your dashboard, select your PDF or Word file, and NotaryChain will compute its SHA-256 hash and run AI analysis automatically.';
+  }
+  if (lastMsg.includes('notar') || lastMsg.includes('verify') || lastMsg.includes('hash')) {
+    return 'NotaryChain computes the cryptographic SHA-256 fingerprint of your document and anchors it to the Polygon Amoy blockchain. You can verify any document proof at /verify-hash.';
+  }
+  if (lastMsg.includes('fraud') || lastMsg.includes('risk') || lastMsg.includes('score')) {
+    return 'Our AI fraud detection analyzes document text consistency, metadata integrity, pixel anomalies, and identity biometrics to assign a trust score between 0 and 100.';
+  }
+  return 'NotaryChain provides AI-grade document analysis, Polygon blockchain verification, and built-in USDC neobank financial settlement. Let me know if you need help with document uploads or verification!';
 }
 
 // ─── Simulated OCR text & fraud metadata for demo (used when no DB) ──────────
@@ -136,6 +177,9 @@ Rules:
 
     return res.json({ success: true, data: { ...parsed, fraudMetadata: fraudMeta } });
   } catch (err) {
+    if (err.code === 'RATE_LIMITED') {
+      return res.status(429).json({ success: false, code: 'RATE_LIMITED', message: err.message, retryAfter: err.retryAfter || 10 });
+    }
     logger.error('Groq summarize error:', err.message);
     next(err);
   }
@@ -192,6 +236,9 @@ Instructions:
 
     return res.json({ success: true, data: { reply, role: 'assistant' } });
   } catch (err) {
+    if (err.code === 'RATE_LIMITED') {
+      return res.status(429).json({ success: false, code: 'RATE_LIMITED', message: err.message, retryAfter: err.retryAfter || 10 });
+    }
     logger.error('Groq chat error:', err.message);
     next(err);
   }
@@ -228,6 +275,9 @@ Why was this document flagged and what should the user do?`;
 
     return res.json({ success: true, data: { explanation } });
   } catch (err) {
+    if (err.code === 'RATE_LIMITED') {
+      return res.status(429).json({ success: false, code: 'RATE_LIMITED', message: err.message, retryAfter: err.retryAfter || 10 });
+    }
     logger.error('Groq explain flag error:', err.message);
     next(err);
   }

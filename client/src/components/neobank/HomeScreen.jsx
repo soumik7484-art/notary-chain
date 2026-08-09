@@ -2,11 +2,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { HiCheckCircle, HiArrowUpRight, HiArrowDownLeft, HiQrCode, HiOutlineBuildingLibrary } from 'react-icons/hi2';
 
+import { useAuth } from '../../hooks/useAuth';
+
 export default function HomeScreen({ account, onNavigate }) {
-  const transactions = account?.transactions || [
-    { id: 'txn_901', type: 'P2P_SEND', title: 'Sent to @ada', amount: '-$150.00', status: 'Completed', date: '2 mins ago', icon: 'send' },
-    { id: 'txn_902', type: 'CASH_IN', title: '7-Eleven Cash Top-Up', amount: '+$500.00', status: 'Completed', date: 'Yesterday', icon: 'cash' },
-  ];
+  const { user } = useAuth();
+  const activeAddr = user?.walletAddress || localStorage.getItem('web3_connected_wallet') || account?.walletAddress || '';
+  const displayAddr = activeAddr ? `${activeAddr.substring(0, 6)}...${activeAddr.slice(-4)}` : 'Not Connected';
+
+  const transactions = activeAddr
+    ? (account?.web3Transactions || [])
+    : (account?.transactions || []);
 
   return (
     <div className="p-4 space-y-5">
@@ -14,13 +19,13 @@ export default function HomeScreen({ account, onNavigate }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary-600 to-violet-500 flex items-center justify-center font-bold text-white shadow-md">
-            {account?.customerId ? account.customerId.substring(4, 6).toUpperCase() : 'NB'}
+            {user?.name?.charAt(0) || 'NB'}
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-white">Polygon Neobank</h2>
+            <h2 className="text-sm font-semibold text-white">{user?.name || 'Polygon Neobank'}</h2>
             <div className="flex items-center space-x-1 text-[11px] text-emerald-400">
               <HiCheckCircle className="w-3.5 h-3.5" />
-              <span>KYC Active • Custodial OMS</span>
+              <span>{activeAddr ? 'Web3 Connected · Polygon Amoy' : 'KYC Active • Custodial OMS'}</span>
             </div>
           </div>
         </div>
@@ -49,15 +54,15 @@ export default function HomeScreen({ account, onNavigate }) {
 
         <div className="mt-2 flex items-baseline space-x-1">
           <span className="text-3xl font-extrabold text-white tracking-tight">
-            ${account?.balance || '2,450.00'}
+            ${activeAddr ? '0.00' : (account?.balance || '2,450.00')}
           </span>
           <span className="text-xs text-slate-400 font-mono">USD</span>
         </div>
 
-        {/* Custodial Wallet Details */}
+        {/* Custodial / Web3 Wallet Details */}
         <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-300">
           <div className="truncate max-w-[210px] font-mono text-slate-400">
-            Addr: {account?.walletAddress && account.walletAddress.length > 10 ? `${account.walletAddress.substring(0, 6)}...${account.walletAddress.slice(-4)}` : '0x71C765...8976F'}
+            Addr: {displayAddr}
           </div>
           <span className="text-emerald-400 text-[10px] bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
             Gas Sponsored ⚡

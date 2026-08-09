@@ -155,9 +155,17 @@ const Sidebar = ({ collapsed, onToggle, isMobileDrawer = false }) => {
             collapsed && !isMobileDrawer ? 'justify-center' : ''
           }`}
         >
-          <div className="w-7 h-7 rounded-md bg-[#2D6A4F] text-white flex items-center justify-center shrink-0 text-[11px] font-bold uppercase">
-            {user?.name?.charAt(0) || 'U'}
-          </div>
+          {user?.avatar || user?.photoURL ? (
+            <img
+              src={user.avatar || user.photoURL}
+              alt={user.name || 'Profile Avatar'}
+              className="w-7 h-7 rounded-md object-cover shrink-0 border border-[#E8E2DA]"
+            />
+          ) : (
+            <div className="w-7 h-7 rounded-md bg-[#2D6A4F] text-white flex items-center justify-center shrink-0 text-[11px] font-bold uppercase">
+              {user?.name?.charAt(0) || 'U'}
+            </div>
+          )}
           {(!collapsed || isMobileDrawer) && (
             <div className="min-w-0 flex-1">
               <p className="text-[12px] font-semibold text-[#2D2A27] truncate">{user?.name || 'User'}</p>

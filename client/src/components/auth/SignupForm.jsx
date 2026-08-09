@@ -32,9 +32,14 @@ const SignupForm = () => {
     if (formData.password !== formData.confirm) return toast.error('Passwords do not match');
     setLoading(true);
     try {
-      await signup(formData);
-      toast.success('Account created successfully!');
-      navigate('/dashboard');
+      const res = await signup(formData);
+      sessionStorage.setItem('pending_google_auth', JSON.stringify({
+        tempToken: 'demo-temp-token',
+        user: res?.user || { ...formData, name: `${formData.firstName} ${formData.lastName}` },
+        mode: 'register'
+      }));
+      toast.success('Account created! Please complete security & Web3 wallet setup.');
+      navigate('/verify-identity');
     } catch (err) {
       toast.error(err.message || 'Signup failed');
     } finally {
@@ -45,11 +50,15 @@ const SignupForm = () => {
   const handleGoogleSignup = async () => {
     setGoogleLoading(true);
     try {
-      await loginWithGoogle('register');
-      toast.success('Google profile verified! Complete face & passkey registration.');
+      const res = await loginWithGoogle('register');
+      if (res?.redirecting) {
+        toast('Redirecting to Google sign-in...', { icon: '🔄' });
+        return;
+      }
+      toast.success('Google profile connected! Complete security & Web3 wallet setup.');
       navigate('/verify-identity');
     } catch (err) {
-      toast.error(err.message || 'Google sign-up failed');
+      toast.error(err.message || 'Google sign-up failed.');
     } finally {
       setGoogleLoading(false);
     }

@@ -3,6 +3,7 @@ import { Menu, Search, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import NotificationBell from '../notifications/NotificationBell';
+import Web3WalletBadge from './Web3WalletBadge';
 
 const Header = ({ onMenuToggle }) => {
   const { user, logout } = useAuth();
@@ -35,12 +36,21 @@ const Header = ({ onMenuToggle }) => {
       </div>
 
       <div className="flex items-center gap-2.5">
+        <Web3WalletBadge />
         <NotificationBell />
 
         <div className="flex items-center gap-2 pl-2 border-l border-[#E8E2DA]">
-          <div className="h-8 w-8 rounded-lg bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-            {user?.name?.charAt(0) || 'U'}
-          </div>
+          {user?.avatar || user?.photoURL ? (
+            <img
+              src={user.avatar || user.photoURL}
+              alt={user.name || 'Profile Avatar'}
+              className="h-8 w-8 rounded-lg object-cover border border-[#E8E2DA] shadow-xs"
+            />
+          ) : (
+            <div className="h-8 w-8 rounded-lg bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              {user?.name?.charAt(0) || 'U'}
+            </div>
+          )}
           <div className="hidden sm:block text-left">
             <p className="text-xs font-semibold text-[#2E2A26] leading-tight">{user?.name || 'User'}</p>
             <p className="text-[10px] text-[#7B746E] capitalize">{user?.role || 'Company'}</p>

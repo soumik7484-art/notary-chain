@@ -37,19 +37,21 @@ const Profile = () => {
   const [avatarError, setAvatarError] = useState(false);
 
   const [form, setForm] = useState({
-    firstName: user?.firstName || '',
-    lastName:  user?.lastName  || '',
+    firstName: user?.firstName && user.firstName !== 'Ada' ? user.firstName : (user?.name?.split(' ')[0] || 'Google'),
+    lastName:  user?.lastName && user.lastName !== 'Lovelace' ? user.lastName : (user?.name?.split(' ').slice(1).join(' ') || 'User'),
     phone:     user?.phone     || '',
-    avatar:    user?.avatar    || '',
+    avatar:    user?.avatar || user?.photoURL || '',
   });
 
   useEffect(() => {
     if (user) {
+      const fName = user.firstName && user.firstName !== 'Ada' ? user.firstName : (user.name?.split(' ')[0] || 'Google');
+      const lName = user.lastName && user.lastName !== 'Lovelace' ? user.lastName : (user.name?.split(' ').slice(1).join(' ') || 'User');
       setForm({
-        firstName: user.firstName || '',
-        lastName:  user.lastName  || '',
-        phone:     user.phone     || '',
-        avatar:    user.avatar    || '',
+        firstName: fName,
+        lastName:  lName,
+        phone:     user.phone  || '',
+        avatar:    user.avatar || user.photoURL || '',
       });
       setAvatarError(false);
     }
@@ -321,6 +323,28 @@ const Profile = () => {
                     {ROLE_LABELS[user?.role] || 'Company Admin'}
                   </span>
                   <span className="text-xs text-[#7B746E]">Contact admin to change your role</span>
+                </div>
+              </div>
+
+              {/* Web3 Wallet Card */}
+              <div className="p-5 rounded-2xl bg-[#F0FAF5] border border-[#B3E4CC] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider">Linked Web3 Wallet</span>
+                  <button
+                    type="button"
+                    onClick={() => setFaceModalOpen(true)}
+                    className="text-xs font-semibold text-[#2D6A4F] hover:underline"
+                  >
+                    Manage / Change Wallet
+                  </button>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-[#E8E2DA] flex items-center justify-between gap-2">
+                  <code className="text-xs font-mono font-bold text-[#2E2A26] truncate">
+                    {user?.walletAddress || localStorage.getItem('web3_connected_wallet') || 'Not connected yet'}
+                  </code>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#2D6A4F] text-white shrink-0">
+                    Polygon Amoy
+                  </span>
                 </div>
               </div>
 

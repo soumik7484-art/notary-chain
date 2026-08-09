@@ -35,9 +35,26 @@ import IdentityVerification from './pages/IdentityVerification';
 import PublicVerify from './pages/PublicVerify';
 
 /**
- * ProtectedRoute — Redirects to /login if user is not authenticated.
+ * ProtectedRoute — Redirects to /login if user is not authenticated, or /verify-identity if face 2FA pending.
  */
 const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, needsVerification, isLoading } = useAuth();
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF8F4]">
+        <div className="animate-spin rounded-full h-10 w-10 border-3 border-[#2D6A4F] border-t-transparent" />
+      </div>
+    );
+  }
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (needsVerification) return <Navigate to="/verify-identity" replace />;
+  return children;
+};
+
+/**
+ * AuthGuard — Requires basic login authentication (does not enforce face 2FA so /verify-identity can render).
+ */
+const AuthGuard = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) {
     return (
@@ -70,8 +87,8 @@ function App() {
               <Route path="/verify-hash" element={<PublicVerify />} />
             </Route>
 
-            {/* Standalone Neobank Route */}
-            <Route path="/neobank" element={<Neobank />} />
+            {/* Standalone Neobank Route (Protected) */}
+            <Route path="/neobank" element={<ProtectedRoute><Neobank /></ProtectedRoute>} />
 
             {/* 2. AUTHENTICATION PAGES (Sign In & Create Account Forms) */}
             <Route element={<AuthLayout />}>
@@ -82,11 +99,11 @@ function App() {
               <Route path="/verify-email/:token" element={<VerifyEmail />} />
             </Route>
 
-            {/* Identity Verification Page (Full Width Standalone) */}
-            <Route path="/verify-identity" element={<IdentityVerification />} />
+            {/* Identity Verification Page (Protected by AuthGuard) */}
+            <Route path="/verify-identity" element={<AuthGuard><IdentityVerification /></AuthGuard>} />
 
             {/* 3. PROTECTED DASHBOARD ROUTES (Product Dashboard) */}
-            <Route element={<DashboardLayout />}>
+            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/documents/:id" element={<DocumentDetail />} />

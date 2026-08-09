@@ -23,16 +23,21 @@ const LoginForm = () => {
   const [loading, setLoading]     = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [walletLoading, setWalletLoading] = useState(false);
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email, password);
-      toast.success('Welcome back!');
-      navigate('/dashboard');
+      const res = await login(email, password);
+      sessionStorage.setItem('pending_google_auth', JSON.stringify({
+        tempToken: 'demo-temp-token',
+        user: res?.user,
+        mode: 'login'
+      }));
+      toast.success('Credentials verified! Complete 2-Step Face ID or Passkey verification.');
+      navigate('/verify-identity');
     } catch (err) {
       toast.error(err.message || 'Login failed');
     } finally {
@@ -43,11 +48,15 @@ const LoginForm = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      await loginWithGoogle('login');
-      toast.success('Google authenticated! Confirm your identity.');
+      const res = await loginWithGoogle('login');
+      if (res?.redirecting) {
+        toast('Redirecting to Google sign-in...', { icon: '🔄' });
+        return;
+      }
+      toast.success('Google profile connected! Complete 2-Step Face ID or Passkey verification.');
       navigate('/verify-identity');
     } catch (err) {
-      toast.error(err.message || 'Google sign-in failed');
+      toast.error(err.message || 'Google sign-in failed.');
     } finally {
       setGoogleLoading(false);
     }
@@ -91,15 +100,20 @@ const LoginForm = () => {
 
       // Authenticate session with connected wallet address
       const res = await login('wallet-user@notarychain.com', 'password123');
-      if (res?.user) {
-        updateUser({
-          ...res.user,
-          walletAddress: walletAddress,
-          isWeb3User: true,
-          name: `Web3 (${walletAddress.substring(0, 6)}...)`
-        });
-      }
-      navigate('/neobank');
+      const walletUser = {
+        ...(res?.user || {}),
+        walletAddress: walletAddress,
+        isWeb3User: true,
+        name: `Web3 (${walletAddress.substring(0, 6)}...)`
+      };
+      updateUser(walletUser);
+      sessionStorage.setItem('pending_google_auth', JSON.stringify({
+        tempToken: 'demo-temp-token',
+        user: walletUser,
+        mode: 'login'
+      }));
+      toast.success('Web3 wallet connected! Complete 2-Step Face ID or Passkey verification.');
+      navigate('/verify-identity');
     } catch (err) {
       if (err?.code === 4001 || err?.message?.toLowerCase().includes('reject') || err?.message?.toLowerCase().includes('cancel')) {
         toast.error('Wallet connection request was cancelled');
