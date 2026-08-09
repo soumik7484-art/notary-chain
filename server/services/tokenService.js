@@ -1,12 +1,16 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { JWT_SECRET, JWT_EXPIRE, JWT_REFRESH_SECRET, JWT_REFRESH_EXPIRE } = process.env;
 
-exports.generateAccessToken = id => jwt.sign({ id }, JWT_SECRET, { expiresIn: JWT_EXPIRE });
-exports.generateRefreshToken = id => jwt.sign({ id }, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRE });
-exports.verifyAccessToken = t => jwt.verify(t, JWT_SECRET);
-exports.verifyRefreshToken = t => jwt.verify(t, JWT_REFRESH_SECRET);
-exports.generateTokenPair = id => ({ accessToken: this.generateAccessToken(id), refreshToken: this.generateRefreshToken(id) });
+const getSecret = () => process.env.JWT_SECRET || 'notarychain-dev-jwt-secret-key-2024-change-in-production';
+const getRefreshSecret = () => process.env.JWT_REFRESH_SECRET || 'notarychain-dev-jwt-refresh-secret-2024';
+const getExpire = () => (process.env.JWT_EXPIRE && process.env.JWT_EXPIRE.trim() !== '' ? process.env.JWT_EXPIRE : '15m');
+const getRefreshExpire = () => (process.env.JWT_REFRESH_EXPIRE && process.env.JWT_REFRESH_EXPIRE.trim() !== '' ? process.env.JWT_REFRESH_EXPIRE : '7d');
+
+exports.generateAccessToken = id => jwt.sign({ id }, getSecret(), { expiresIn: getExpire() });
+exports.generateRefreshToken = id => jwt.sign({ id }, getRefreshSecret(), { expiresIn: getRefreshExpire() });
+exports.verifyAccessToken = t => jwt.verify(t, getSecret());
+exports.verifyRefreshToken = t => jwt.verify(t, getRefreshSecret());
+exports.generateTokenPair = id => ({ accessToken: exports.generateAccessToken(id), refreshToken: exports.generateRefreshToken(id) });
 exports.hashToken = async t => await bcrypt.hash(t, 10);
 
 exports.revokeRefreshToken = async (u, t) => {

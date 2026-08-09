@@ -13,6 +13,13 @@ const err = require('../utils/apiError');
 const faceService = require('../services/faceRecognitionService');
 const logger = require('../utils/logger');
 
+const safeSignToken = (payload, secretFallback, expireFallback) => {
+  const secret = process.env.JWT_SECRET || secretFallback;
+  const expireEnv = process.env.JWT_EXPIRE;
+  const expiresIn = (expireEnv && typeof expireEnv === 'string' && expireEnv.trim() !== '') ? expireEnv.trim() : expireFallback;
+  return jwt.sign(payload, secret, { expiresIn });
+};
+
 // Fallback memory store when MongoDB offline
 const mongoDbFallbackStore = new Map();
 
@@ -365,7 +372,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
         }
 
         const registeredUser = require('../utils/helpers').sanitizeUser(userRecord);
-        const accessToken = jwt.sign({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, process.env.JWT_SECRET || 'notarychain-dev-jwt-secret-key-2024-change-in-production', { expiresIn: process.env.JWT_EXPIRE || '7d' });
+        const accessToken = safeSignToken({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, 'notarychain-dev-jwt-secret-key-2024-change-in-production', '7d');
         const refreshToken = t.generateRefreshToken(userRecord._id || 'demo-user-id');
         const tokens = { accessToken, refreshToken };
         return resU.success(res, { user: registeredUser, tokens }, 'Security passkey enrolled in MongoDB successfully!');
@@ -383,7 +390,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
         }
 
         const verifiedUser = require('../utils/helpers').sanitizeUser(userRecord);
-        const accessToken = jwt.sign({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, process.env.JWT_SECRET || 'notarychain-dev-jwt-secret-key-2024-change-in-production', { expiresIn: process.env.JWT_EXPIRE || '7d' });
+        const accessToken = safeSignToken({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, 'notarychain-dev-jwt-secret-key-2024-change-in-production', '7d');
         const refreshToken = t.generateRefreshToken(userRecord._id || 'demo-user-id');
         const tokens = { accessToken, refreshToken };
         return resU.success(res, { user: verifiedUser, tokens }, 'Security passkey verified via MongoDB!');
@@ -419,7 +426,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
       }
 
       const registeredUser = require('../utils/helpers').sanitizeUser(userRecord);
-      const accessToken = jwt.sign({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, process.env.JWT_SECRET || 'notarychain-dev-jwt-secret-key-2024-change-in-production', { expiresIn: process.env.JWT_EXPIRE || '7d' });
+      const accessToken = safeSignToken({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, 'notarychain-dev-jwt-secret-key-2024-change-in-production', '7d');
       const refreshToken = t.generateRefreshToken(userRecord._id || 'demo-user-id');
       const tokens = { accessToken, refreshToken };
 
@@ -459,7 +466,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
     }
 
     const verifiedUser = require('../utils/helpers').sanitizeUser(userRecord);
-    const accessToken = jwt.sign({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, process.env.JWT_SECRET || 'notarychain-dev-jwt-secret-key-2024-change-in-production', { expiresIn: process.env.JWT_EXPIRE || '7d' });
+    const accessToken = safeSignToken({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, 'notarychain-dev-jwt-secret-key-2024-change-in-production', '7d');
     const refreshToken = t.generateRefreshToken(userRecord._id || 'demo-user-id');
     const tokens = { accessToken, refreshToken };
 
