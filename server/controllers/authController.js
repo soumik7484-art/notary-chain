@@ -52,7 +52,10 @@ exports.signup = async (req, res, next) => {
     
     const u = await User.create({
       ...req.body,
-      email: cleanEmail
+      email: cleanEmail,
+      firstName: firstName || cleanEmail.split('@')[0],
+      lastName: lastName || 'User',
+      role: role || 'company'
     });
     const tk = u.createEmailVerificationToken();
     await u.save();

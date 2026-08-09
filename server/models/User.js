@@ -56,12 +56,21 @@ userSchema.pre('save', async function(next) {
 });
 
 userSchema.methods.comparePassword = async function(candidate) {
-  return await bcrypt.compare(candidate, this.password);
+  if (!this.password || !candidate) return false;
+  try {
+    return await bcrypt.compare(candidate, this.password);
+  } catch (err) {
+    return false;
+  }
 };
 
 userSchema.methods.comparePasskey = async function(candidate) {
-  if (!this.passkey) return false;
-  return await bcrypt.compare(candidate, this.passkey);
+  if (!this.passkey || !candidate) return false;
+  try {
+    return await bcrypt.compare(candidate, this.passkey);
+  } catch (err) {
+    return false;
+  }
 };
 
 userSchema.methods.createEmailVerificationToken = function() {
