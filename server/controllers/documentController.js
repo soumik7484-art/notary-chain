@@ -10,20 +10,8 @@ const AIReport  = require('../models/AIReport');
 const r         = require('../utils/apiResponse');
 const logger    = require('../utils/logger');
 
-/* ─── Multer – store uploads to disk ──────────────────────────── */
-const isVercel = !!process.env.VERCEL;
-const uploadDir = isVercel
-  ? path.join('/tmp', 'uploads')
-  : path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename:    (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
-  }
-});
+/* ─── Multer – store uploads in memory for 100% serverless compatibility ─ */
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowed = [
@@ -45,13 +33,14 @@ exports.multerUpload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }  // 50 MB
 }).single('file');
 
-/* ─── Text extractor (PDF / DOCX / TXT / image placeholder) ── */
-async function extractText(filePath, mimeType) {
+/* ─── Text extractor (PDF / DOCX / TXT / image) ───────────────────── */
+async function extractText(fileBuffer, mimeType, fileName) {
   try {
+    if (!fileBuffer || fileBuffer.length === 0) return '';
+
     if (mimeType === 'application/pdf') {
       const pdfParse = require('pdf-parse');
-      const buf  = fs.readFileSync(filePath);
-      const data = await pdfParse(buf);
+      const data = await pdfParse(fileBuffer);
       return (data.text || '').trim();
     }
 
@@ -60,16 +49,15 @@ async function extractText(filePath, mimeType) {
       mimeType === 'application/msword'
     ) {
       const mammoth = require('mammoth');
-      const result  = await mammoth.extractRawText({ path: filePath });
+      const result  = await mammoth.extractRawText({ buffer: fileBuffer });
       return (result.value || '').trim();
     }
 
     if (mimeType === 'text/plain') {
-      return fs.readFileSync(filePath, 'utf8').trim();
+      return fileBuffer.toString('utf8').trim();
     }
 
-    // For images: return a placeholder (no OCR installed)
-    return `[Image document: ${path.basename(filePath)}]\n\nThis document is an image file. AI analysis is based on the document title and category.`;
+    return `[Image document: ${fileName || 'Uploaded Image'}]\n\nThis document is an image file. AI analysis is based on the document title and category.`;
   } catch (err) {
     logger.warn('Text extraction failed:', err.message);
     return '';
@@ -175,25 +163,26 @@ exports.upload = async (req, res, next) => {
 
     const docTitle = (title || path.parse(file.originalname).name).trim();
 
-    // ── 1. Extract text from the file ──────────────────────────────
-    const ocrText = await extractText(file.path, file.mimetype);
-
-    // ── 2. Compute SHA-256 hash of file ───────────────────────────
-    const fileBuffer = fs.readFileSync(file.path);
+    // ── 1. Get file buffer & compute SHA-256 hash ────────────────
+    const fileBuffer = file.buffer || (file.path ? fs.readFileSync(file.path) : Buffer.from(''));
     const sha256Hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+
+    // ── 2. Extract text from file buffer ─────────────────────────
+    const ocrText = await extractText(fileBuffer, file.mimetype, file.originalname);
 
     // ── 3. Save Document record to MongoDB ────────────────────────
     let docRecord = null;
     if (mongoose.connection.readyState === 1) {
+      const uId = (req.user && req.user._id) ? req.user._id : (req.user && req.user.id ? req.user.id : new mongoose.Types.ObjectId());
       docRecord = await Document.create({
         title:            docTitle,
         description:      description || '',
-        fileUrl:          `/uploads/${file.filename}`,
+        fileUrl:          `/uploads/${Date.now()}-${file.originalname}`,
         originalFileName: file.originalname,
         fileType:         path.extname(file.originalname).replace('.', '').toUpperCase(),
-        fileSize:         file.size,
+        fileSize:         file.size || fileBuffer.length,
         mimeType:         file.mimetype,
-        uploadedBy:       req.user._id,
+        uploadedBy:       uId,
         hash:             sha256Hash,
         category:         category || 'other',
         status:           'draft',
