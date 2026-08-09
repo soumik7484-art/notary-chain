@@ -241,6 +241,25 @@ exports.upload = async (req, res, next) => {
             requestedBy: req.user._id,
             processedAt: new Date()
           });
+        // Create AuditLog entry for History page
+        try {
+          const AuditLog = require('../models/AuditLog');
+          await AuditLog.create({
+            userId: req.user._id || req.user.id,
+            userRole: req.user.role || 'company',
+            documentId: docRecord._id,
+            action: 'DOCUMENT_UPLOADED',
+            category: 'document',
+            status: 'success',
+            metadata: {
+              title: docTitle,
+              category: category || 'other',
+              hash: sha256Hash,
+              fileSize: file.size
+            }
+          });
+        } catch (auditErr) {
+          logger.warn('Could not save audit log:', auditErr.message);
         }
       } catch (dbErr) {
         logger.warn('Could not save AI report:', dbErr.message);
