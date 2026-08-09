@@ -18,6 +18,19 @@ export default function WithdrawScreen({ account }) {
       return;
     }
 
+    const availableBal = parseFloat((account?.balance || '0.00').toString().replace(/,/g, '')) || 0;
+    const numAmount = parseFloat(amount) || 0;
+
+    if (availableBal <= 0) {
+      toast.error(`Insufficient balance. You have $${availableBal.toFixed(2)} available.`);
+      return;
+    }
+
+    if (numAmount > availableBal) {
+      toast.error(`Insufficient balance. You have $${availableBal.toFixed(2)} available.`);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await withdrawToBank(amount, accountNumber, routingNumber);
@@ -72,7 +85,7 @@ export default function WithdrawScreen({ account }) {
           <div className="p-3.5 rounded-xl bg-slate-900 border border-white/10 space-y-1">
             <div className="flex justify-between items-center text-xs">
               <label className="font-medium text-slate-300">Payout Amount (USD)</label>
-              <span className="text-[10px] text-slate-400">Available: ${account?.balance || '2,450.00'}</span>
+              <span className="text-[10px] text-slate-400">Available: ${account?.balance || '0.00'}</span>
             </div>
             <div className="relative flex items-center">
               <span className="text-slate-400 text-lg font-bold mr-1.5">$</span>

@@ -4,7 +4,7 @@ import { HiCheckCircle, HiArrowUpRight, HiArrowDownLeft, HiQrCode, HiOutlineBuil
 
 import { useAuth } from '../../hooks/useAuth';
 
-export default function HomeScreen({ account, onNavigate }) {
+export default function HomeScreen({ account, onNavigate, liveBal }) {
   const { user } = useAuth();
   const activeAddr = user?.walletAddress || localStorage.getItem('web3_connected_wallet') || account?.walletAddress || '';
   const displayAddr = activeAddr ? `${activeAddr.substring(0, 6)}...${activeAddr.slice(-4)}` : 'Not Connected';
@@ -25,7 +25,7 @@ export default function HomeScreen({ account, onNavigate }) {
             <h2 className="text-sm font-semibold text-white">{user?.name || 'Polygon Neobank'}</h2>
             <div className="flex items-center space-x-1 text-[11px] text-emerald-400">
               <HiCheckCircle className="w-3.5 h-3.5" />
-              <span>{activeAddr ? 'Web3 Connected · Polygon Amoy' : 'KYC Active • Custodial OMS'}</span>
+              <span>{activeAddr ? `Web3 Connected · ${liveBal?.networkName || 'Polygon Testnet'}` : 'KYC Active • Custodial OMS'}</span>
             </div>
           </div>
         </div>
@@ -48,7 +48,7 @@ export default function HomeScreen({ account, onNavigate }) {
         <div className="flex items-center justify-between text-xs text-primary-200">
           <span>USD Balance (Settled in USDC)</span>
           <span className="px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-[10px] font-mono border border-primary-400/30">
-            Polygon Network
+            {liveBal?.networkName || 'Polygon Network'}
           </span>
         </div>
 

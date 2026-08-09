@@ -30,12 +30,8 @@ async function getOrCreateAccountInternal(req) {
       kycStatus: 'ACTIVE',
       asset: 'USDC',
       chain: 'polygon',
-      rawBalance: 2450.00,
-      transactions: [
-        { id: 'txn_901', type: 'P2P_SEND', title: 'Sent to @ada', amount: '-$150.00', status: 'Completed', date: '2 mins ago', icon: 'send', txHash: '0x8f2a...91b' },
-        { id: 'txn_902', type: 'CASH_IN', title: '7-Eleven Cash Top-Up', amount: '+$500.00', status: 'Completed', date: 'Yesterday', icon: 'cash', txHash: '0x3c1b...44e' },
-        { id: 'txn_903', type: 'VIRTUAL_BANK', title: 'ACH Direct Deposit', amount: '+$2,100.00', status: 'Completed', date: 'Jul 28, 2026', icon: 'bank', txHash: '0x991f...10a' }
-      ],
+      rawBalance: 0.00,
+      transactions: [],
       createdAt: new Date()
     };
     userOmsStore.set(userId, account);
@@ -73,7 +69,7 @@ exports.onboard = async (req, res, next) => {
       kycStatus: 'ACTIVE',
       asset: 'USDC',
       chain: 'polygon',
-      rawBalance: 2450.00,
+      rawBalance: 0.00,
       transactions: [],
       createdAt: new Date()
     };
@@ -98,7 +94,7 @@ exports.onboard = async (req, res, next) => {
       message: 'Successfully onboarded on Polygon Open Money Stack! Custodial USDC wallet provisioned.',
       data: {
         ...omsAccount,
-        balance: '2,450.00'
+        balance: '0.00'
       }
     });
   } catch (err) {

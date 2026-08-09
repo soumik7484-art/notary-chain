@@ -116,80 +116,24 @@ const StatusPill = ({ label, variant = 'green', className = '' }) => {
    BALANCE CARD
    Premium white card with green top-border accent stripe
 ──────────────────────────────────────────────────────────────── */
-const BalanceCard = ({ account }) => {
-  const { user, updateUser } = useAuth();
+const BalanceCard = ({ account, liveBal, syncing, fetchRealBalance, handleConnectWallet }) => {
+  const { user } = useAuth();
   const [hidden, setHidden] = useState(false);
   const [copied, setCopied] = useState(false);
   const [currency, setCurrency] = useState('USD');
-  const [liveBal, setLiveBal] = useState(null);
-  const [syncing, setSyncing] = useState(false);
 
   const addr = user?.walletAddress || localStorage.getItem('web3_connected_wallet') || account?.walletAddress || '';
   const shortAddr = addr ? `${addr.slice(0, 8)}...${addr.slice(-6)}` : 'Not Connected';
 
-  const fetchRealBalance = async (walletAddress) => {
-    if (!walletAddress) return;
-    setSyncing(true);
-    try {
-      if (window.ethereum) {
-        const hex = await window.ethereum.request({ method: 'eth_getBalance', params: [walletAddress, 'latest'] });
-        const wei = BigInt(hex);
-        const pol = Number(wei) / 1e18;
-        setLiveBal({ pol: pol.toFixed(4), usd: (pol * 0.42).toFixed(2) });
-        setSyncing(false);
-        return;
-      }
-    } catch (e) {}
-
-    try {
-      const res = await fetch('https://polygon-amoy-bor-rpc.publicnode.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getBalance', params: [walletAddress, 'latest'], id: 1 })
-      });
-      const data = await res.json();
-      if (data?.result) {
-        const wei = BigInt(data.result);
-        const pol = Number(wei) / 1e18;
-        setLiveBal({ pol: pol.toFixed(4), usd: (pol * 0.42).toFixed(2) });
-      }
-    } catch (e) {}
-    setSyncing(false);
-  };
-
-  useEffect(() => {
-    if (addr) fetchRealBalance(addr);
-  }, [addr]);
-
-  const handleConnectWallet = async () => {
-    if (!window.ethereum) {
-      toast.error('MetaMask extension not found. Please install MetaMask.');
-      return;
-    }
-    setSyncing(true);
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts && accounts.length > 0) {
-        const selectedAddr = accounts[0];
-        localStorage.setItem('web3_connected_wallet', selectedAddr);
-        updateUser({ ...user, walletAddress: selectedAddr, isWeb3User: true });
-        await fetchRealBalance(selectedAddr);
-        toast.success(`MetaMask Connected: ${selectedAddr.substring(0, 6)}...${selectedAddr.slice(-4)}`);
-      }
-    } catch (err) {
-      toast.error('Failed to connect MetaMask');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const rawBalance = liveBal
-    ? parseFloat(liveBal.usd)
-    : addr
-    ? 0.00
-    : parseFloat((account?.balance || '2450.00').toString().replace(/,/g, ''));
+    ? (liveBal.isSupported === false ? null : parseFloat(liveBal.usd))
+    : (account?.rawBalance !== undefined ? parseFloat(account.rawBalance) : 0.00);
 
   const getFormattedBalance = () => {
+    if (liveBal && liveBal.isSupported === false) {
+      return 'Unsupported Network';
+    }
+    if (rawBalance === null) return 'Unsupported Network';
     switch (currency) {
       case 'EUR': return `€${(rawBalance * 0.92).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       case 'INR': return `₹${(rawBalance * 83.50).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -299,17 +243,23 @@ const BalanceCard = ({ account }) => {
         </div>
 
         {liveBal && (
-          <div className="mb-3 px-2.5 py-1 rounded-lg bg-[#F0FAF5] border border-[#B3E4CC] text-[11px] font-bold text-[#2D6A4F] flex items-center justify-between">
-            <span>On-Chain POL Balance:</span>
-            <span className="font-mono">{liveBal.pol} POL</span>
+          <div className={`mb-3 px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center justify-between ${
+            liveBal.isSupported === false
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
+              : 'bg-[#F0FAF5] border-[#B3E4CC] text-[#2D6A4F]'
+          }`}>
+            <span>Network: {liveBal.networkName || 'Polygon Testnet'}</span>
+            <span className="font-mono">{liveBal.isSupported === false ? 'Unsupported' : `${liveBal.pol} POL`}</span>
           </div>
         )}
 
         {/* KYC status */}
         <div className="flex items-center gap-2 mb-5">
-          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: T.green }} />
-          <p className="text-[11px] font-semibold" style={{ color: T.greenText }}>
-            {addr ? 'Web3 Wallet Connected · Polygon Amoy' : 'KYC ACTIVE · Custodial OMS'}
+          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: liveBal?.isSupported === false ? '#D97706' : T.green }} />
+          <p className="text-[11px] font-semibold" style={{ color: liveBal?.isSupported === false ? '#D97706' : T.greenText }}>
+            {addr
+              ? (liveBal?.isSupported === false ? 'Unsupported Network · Switch to Polygon' : `Web3 Wallet Connected · ${liveBal?.networkName || 'Polygon Testnet'}`)
+              : 'KYC ACTIVE · Custodial OMS'}
           </p>
         </div>
 
@@ -771,13 +721,186 @@ const CoinMascot = () => (
 ──────────────────────────────────────────────────────────────── */
 export default function Neobank() {
   const navigate  = useNavigate();
+  const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('home');
   const [account,   setAccount]   = useState(null);
   const [loading,   setLoading]   = useState(true);
+  const [liveBal,   setLiveBal]   = useState(null);
+  const [syncing,   setSyncing]   = useState(false);
+
+  const addr = user?.walletAddress || localStorage.getItem('web3_connected_wallet') || account?.walletAddress || '';
+
+  const fetchRealBalance = async (walletAddress, overrideChainId = null) => {
+    const targetAddr = walletAddress || addr;
+    if (!targetAddr) return;
+    setSyncing(true);
+
+    let activeChainId = overrideChainId;
+    if (!activeChainId && window.ethereum) {
+      try {
+        activeChainId = await window.ethereum.request({ method: 'eth_chainId' });
+      } catch (e) {}
+    }
+
+    const SUPPORTED = {
+      '0x13882': { name: 'Polygon Testnet', isTestnet: true, rpcUrl: 'https://polygon-amoy-bor-rpc.publicnode.com', usdc: ['0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582', '0x0FA8781a83E46826621b3BC094Ea2A0212e71B23'] },
+      '80002':   { name: 'Polygon Testnet', isTestnet: true, rpcUrl: 'https://polygon-amoy-bor-rpc.publicnode.com', usdc: ['0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582', '0x0FA8781a83E46826621b3BC094Ea2A0212e71B23'] },
+      '0x13881': { name: 'Polygon Testnet', isTestnet: true, rpcUrl: 'https://rpc-mumbai.maticvigil.com', usdc: ['0x9999f7Fea19341498065842845c479F2183c5F41'] },
+      '80001':   { name: 'Polygon Testnet', isTestnet: true, rpcUrl: 'https://rpc-mumbai.maticvigil.com', usdc: ['0x9999f7Fea19341498065842845c479F2183c5F41'] },
+      '0x89':    { name: 'Polygon Mainnet', isTestnet: false, rpcUrl: 'https://polygon-rpc.com', usdc: ['0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'] },
+      '137':     { name: 'Polygon Mainnet', isTestnet: false, rpcUrl: 'https://polygon-rpc.com', usdc: ['0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'] }
+    };
+
+    const netInfo = activeChainId ? SUPPORTED[activeChainId] : null;
+
+    if (activeChainId && !netInfo) {
+      setLiveBal({
+        usd: '0.00',
+        pol: '0.0000',
+        usdc: '0.00',
+        networkName: 'Unsupported Network',
+        isSupported: false,
+        chainId: activeChainId
+      });
+      setSyncing(false);
+      return;
+    }
+
+    const currentNet = netInfo || SUPPORTED['0x13882'];
+    let fetchedUsdc = 0;
+    let fetchedNative = 0;
+
+    const cleanAddr = targetAddr.toLowerCase().replace('0x', '').padStart(64, '0');
+    const callData = `0x70a08231${cleanAddr}`;
+
+    for (const contractAddr of currentNet.usdc) {
+      try {
+        let hexRes = null;
+        if (window.ethereum) {
+          hexRes = await window.ethereum.request({
+            method: 'eth_call',
+            params: [{ to: contractAddr, data: callData }, 'latest']
+          });
+        }
+        if (!hexRes || hexRes === '0x' || hexRes === '0x0') {
+          const rpcRes = await fetch(currentNet.rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              method: 'eth_call',
+              params: [{ to: contractAddr, data: callData }, 'latest'],
+              id: 1
+            })
+          });
+          const rpcJson = await rpcRes.json();
+          hexRes = rpcJson?.result;
+        }
+
+        if (hexRes && hexRes !== '0x' && hexRes !== '0x0') {
+          const bigVal = BigInt(hexRes);
+          if (bigVal > 0n) {
+            const val6 = Number(bigVal) / 1e6;
+            const val18 = Number(bigVal) / 1e18;
+            const computedUsdc = val6 > 1e9 ? val18 : val6;
+            if (computedUsdc > fetchedUsdc) {
+              fetchedUsdc = computedUsdc;
+            }
+          }
+        }
+      } catch (err) {}
+    }
+
+    try {
+      let nativeHex = null;
+      if (window.ethereum) {
+        nativeHex = await window.ethereum.request({ method: 'eth_getBalance', params: [targetAddr, 'latest'] });
+      }
+      if (!nativeHex) {
+        const rpcRes = await fetch(currentNet.rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_getBalance',
+            params: [targetAddr, 'latest'],
+            id: 1
+          })
+        });
+        const rpcJson = await rpcRes.json();
+        nativeHex = rpcJson?.result;
+      }
+
+      if (nativeHex && nativeHex !== '0x') {
+        const wei = BigInt(nativeHex);
+        fetchedNative = Number(wei) / 1e18;
+      }
+    } catch (e) {}
+
+    const finalUsd = fetchedUsdc > 0
+      ? fetchedUsdc
+      : (fetchedNative > 0 ? fetchedNative * 0.42 : 0);
+
+    setLiveBal({
+      usd: finalUsd.toFixed(2),
+      pol: fetchedNative.toFixed(4),
+      usdc: fetchedUsdc.toFixed(2),
+      networkName: currentNet.name,
+      isSupported: true,
+      isTestnet: currentNet.isTestnet,
+      chainId: activeChainId || '80002'
+    });
+    setSyncing(false);
+  };
+
+  useEffect(() => {
+    if (addr) fetchRealBalance(addr);
+
+    if (window.ethereum) {
+      const handleChainChanged = (newChainId) => {
+        fetchRealBalance(addr, newChainId);
+      };
+      const handleAccountsChanged = (accs) => {
+        if (accs && accs.length > 0) {
+          fetchRealBalance(accs[0]);
+        }
+      };
+      window.ethereum.on('chainChanged', handleChainChanged);
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      return () => {
+        if (window.ethereum.removeListener) {
+          window.ethereum.removeListener('chainChanged', handleChainChanged);
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        }
+      };
+    }
+  }, [addr]);
+
+  const handleConnectWallet = async () => {
+    if (!window.ethereum) {
+      toast.error('MetaMask extension not found. Please install MetaMask.');
+      return;
+    }
+    setSyncing(true);
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts && accounts.length > 0) {
+        const selectedAddr = accounts[0];
+        localStorage.setItem('web3_connected_wallet', selectedAddr);
+        if (updateUser) updateUser({ ...user, walletAddress: selectedAddr, isWeb3User: true });
+        await fetchRealBalance(selectedAddr);
+        toast.success(`MetaMask Connected: ${selectedAddr.substring(0, 6)}...${selectedAddr.slice(-4)}`);
+      }
+    } catch (err) {
+      toast.error('Failed to connect MetaMask');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const fetchAccount = async () => {
-    const savedWallet = localStorage.getItem('web3_connected_wallet') || '0x19443302aC781A943AC33b2d228D7736d4E00FE4';
-    let liveBalance = '2,450.00';
+    const savedWallet = localStorage.getItem('web3_connected_wallet') || '';
+    let liveBalance = '0.00';
     let isWeb3Connected = false;
 
     try {
@@ -789,12 +912,12 @@ export default function Neobank() {
         if (hexBalance) {
           const wei = parseInt(hexBalance, 16);
           const matic = wei / 1e18;
-          liveBalance = matic > 0 ? matic.toFixed(4) : '2,450.00';
+          liveBalance = matic > 0 ? matic.toFixed(4) : '0.00';
           isWeb3Connected = true;
         }
       }
     } catch {
-      // Fall back to API or default testnet mode
+      // Fall back to API or default mode
     }
 
     try {
@@ -829,7 +952,7 @@ export default function Neobank() {
   /* renderScreen — used by MOBILE (inside IPhoneFrame) — includes HomeScreen */
   const renderScreen = () => {
     switch (activeTab) {
-      case 'home':     return <HomeScreen     account={account} onNavigate={setActiveTab} />;
+      case 'home':     return <HomeScreen     account={account} onNavigate={setActiveTab} liveBal={liveBal} />;
       case 'cash-in':  return <CashInScreen   account={account} />;
       case 'send':     return <SendScreen     account={account} onComplete={() => { fetchAccount(); setActiveTab('home'); }} />;
       case 'deposit':  return <DepositScreen  account={account} />;
@@ -989,7 +1112,7 @@ export default function Neobank() {
           >
             {loading ? <Skeleton /> : (
               <>
-                <BalanceCard account={account} />
+                <BalanceCard account={account} liveBal={liveBal} syncing={syncing} fetchRealBalance={fetchRealBalance} handleConnectWallet={handleConnectWallet} />
                 <QuickActions onNavigate={setActiveTab} />
                 <VirtualBankCard onNavigate={setActiveTab} />
               </>
