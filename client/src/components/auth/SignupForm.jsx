@@ -55,12 +55,7 @@ const SignupForm = () => {
         toast('Redirecting to Google sign-in...', { icon: '🔄' });
         return;
       }
-      if (res?.autoLoggedIn) {
-        toast.success('Signed in successfully with Google!');
-        navigate('/dashboard');
-        return;
-      }
-      toast.success('Google profile connected! Proceeding to verification.');
+      toast.success('Google account created! Please complete 2-Step Face ID or Passkey registration.');
       navigate('/verify-identity');
     } catch (err) {
       toast.error(err.message || 'Google sign-up failed.');

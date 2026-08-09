@@ -262,33 +262,6 @@ exports.googleAuthInit = async (req, res, next) => {
       };
     }
 
-    const hasCompletedSetup = !!(
-      user.faceVerified ||
-      user.passkeyVerified ||
-      (user.faceEmbedding && user.faceEmbedding.length >= 64)
-    );
-
-    // BUG 2 FIX: Returning user with setup complete -> 1-click instant login to dashboard!
-    if (mode === 'login' && hasCompletedSetup) {
-      const tokens = t.generateTokenPair(user._id || 'demo-user-id');
-      return resU.success(res, {
-        tokens,
-        mode,
-        needsSetup: false,
-        user: {
-          _id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role || 'company',
-          avatar: user.avatar,
-          faceVerified: true,
-          walletAddress: user.walletAddress || null
-        }
-      }, 'Google sign-in verified. Welcome back!');
-    }
-
-    // BUG 1 FIX: New account signup (mode === 'register') or incomplete setup -> enforce setup flow (/verify-identity)
     const tempToken = jwt.sign(
       { userId: user._id.toString(), googleId, email: cleanEmail, fullName: fullName || `${user.firstName} ${user.lastName}`, mode },
       process.env.JWT_SECRET || 'notarychain-dev-jwt-secret-key-2024-change-in-production',
@@ -305,10 +278,10 @@ exports.googleAuthInit = async (req, res, next) => {
         fullName: fullName || `${user.firstName} ${user.lastName}`,
         avatar: user.avatar,
         faceVerified: false,
-        hasFaceEnrolled: false,
+        hasFaceEnrolled: !!(user.faceEmbedding && user.faceEmbedding.length >= 64),
         walletConnected: !!user.walletConnected
       }
-    }, 'Google account initialized. Please complete face/passkey registration & wallet setup.');
+    }, 'Google profile authenticated. Please complete 2-Step Face ID or Passkey verification.');
   } catch (x) { next(x); }
 };
 

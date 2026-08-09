@@ -67,27 +67,18 @@ export const AuthProvider = ({ children }) => {
 
     const tempToken = payload?.tempToken;
     const backendUser = payload?.user;
-    const tokens = payload?.tokens;
 
     const mergedUser = { ...googleUser, ...backendUser, avatar: photo || backendUser?.avatar };
 
-    // If backend issued full access tokens directly (2FA disabled or completed)
-    if (tokens?.accessToken) {
-      localStorage.setItem('accessToken', tokens.accessToken);
-      if (tokens.refreshToken) localStorage.setItem('refreshToken', tokens.refreshToken);
-      localStorage.setItem('face_verified', 'true');
-      localStorage.setItem('user_session', JSON.stringify(mergedUser));
-      setNeedsVerification(false);
-      setUser(mergedUser);
-      return { user: mergedUser, autoLoggedIn: true };
-    }
-
-    // Otherwise store pending tempToken for 2-step verification
+    // Always store pending tempToken and enforce 2-step verification (Face ID / Passkey)
     sessionStorage.setItem('pending_google_auth', JSON.stringify({
       tempToken: tempToken,
       user: mergedUser,
       mode: mode
     }));
+
+    setNeedsVerification(true);
+    localStorage.removeItem('face_verified');
 
     return { user: mergedUser, tempToken: tempToken, autoLoggedIn: false };
   }, []);
