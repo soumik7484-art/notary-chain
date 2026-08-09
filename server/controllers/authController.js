@@ -488,9 +488,14 @@ exports.googleVerifyIdentity = async (req, res, next) => {
     }
 
     userRecord.faceVerified = true;
-    userRecord.lastVerification = Date.now();
-    if (mongoose.connection.readyState === 1 && typeof userRecord.save === 'function') {
-      try { await userRecord.save(); } catch (e) {}
+    userRecord.lastVerification = new Date();
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await User.updateOne(
+          { $or: [{ _id: userRecord._id }, { email: cleanEmail }] },
+          { $set: { faceVerified: true, lastVerification: new Date() } }
+        );
+      } catch (e) {}
     }
 
     const verifiedUser = require('../utils/helpers').sanitizeUser(userRecord);
