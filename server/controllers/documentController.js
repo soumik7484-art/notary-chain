@@ -230,6 +230,8 @@ exports.upload = async (req, res, next) => {
             requestedBy: req.user._id,
             processedAt: new Date()
           });
+        }
+
         // Create AuditLog entry for History page
         try {
           const AuditLog = require('../models/AuditLog');
@@ -244,7 +246,7 @@ exports.upload = async (req, res, next) => {
               title: docTitle,
               category: category || 'other',
               hash: sha256Hash,
-              fileSize: file.size
+              fileSize: file.size || fileBuffer.length
             }
           });
         } catch (auditErr) {
