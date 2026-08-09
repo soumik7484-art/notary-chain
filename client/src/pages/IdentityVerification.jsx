@@ -419,20 +419,36 @@ const IdentityVerification = () => {
   const handleConnectMetaMaskOnboarding = async () => {
     setWalletConnecting(true);
     try {
-      if (!window.ethereum) {
-        toast.error('MetaMask extension not detected. You can type your wallet address below.');
+      if (typeof window.ethereum === 'undefined') {
+        toast.error('No Web3 wallet extension detected — please install MetaMask to connect.');
         setWalletConnecting(false);
         return;
       }
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts && accounts.length > 0) {
-        const addr = accounts[0];
-        setOnboardingWallet(addr);
-        localStorage.setItem('web3_connected_wallet', addr);
-        toast.success(`MetaMask Connected: ${addr.substring(0, 6)}...${addr.slice(-4)}`);
+      if (!accounts || accounts.length === 0) {
+        toast.error('Wallet connection rejected by user.');
+        setWalletConnecting(false);
+        return;
       }
+
+      const addr = accounts[0];
+      setOnboardingWallet(addr);
+      localStorage.setItem('web3_connected_wallet', addr);
+
+      // Save real Web3 wallet to backend MongoDB
+      try {
+        await axiosInstance.post('/blockchain/connect-wallet', { walletAddress: addr });
+      } catch (dbErr) {
+        console.warn('[Wallet DB Save Warning]:', dbErr.message);
+      }
+
+      toast.success(`MetaMask Connected: ${addr.substring(0, 6)}...${addr.slice(-4)}`);
     } catch (err) {
-      toast.error('Failed to connect MetaMask');
+      if (err.code === 4001) {
+        toast.error('Wallet connection request rejected by user.');
+      } else {
+        toast.error(err.message || 'Failed to connect Web3 wallet.');
+      }
     } finally {
       setWalletConnecting(false);
     }

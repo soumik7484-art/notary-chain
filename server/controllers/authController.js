@@ -262,13 +262,19 @@ exports.googleAuthInit = async (req, res, next) => {
       };
     }
 
-    const requireFace2FA = process.env.REQUIRE_FACE_2FA === 'true';
+    const hasCompletedSetup = !!(
+      user.faceVerified ||
+      user.passkeyVerified ||
+      (user.faceEmbedding && user.faceEmbedding.length >= 64)
+    );
 
-    if (!requireFace2FA || user.faceVerified) {
+    // BUG 2 FIX: Returning user with setup complete -> 1-click instant login to dashboard!
+    if (mode === 'login' && hasCompletedSetup) {
       const tokens = t.generateTokenPair(user._id || 'demo-user-id');
       return resU.success(res, {
         tokens,
         mode,
+        needsSetup: false,
         user: {
           _id: user._id,
           email: user.email,
@@ -276,13 +282,15 @@ exports.googleAuthInit = async (req, res, next) => {
           lastName: user.lastName,
           role: user.role || 'company',
           avatar: user.avatar,
-          faceVerified: true
+          faceVerified: true,
+          walletAddress: user.walletAddress || null
         }
-      }, 'Google sign-in completed successfully!');
+      }, 'Google sign-in verified. Welcome back!');
     }
 
+    // BUG 1 FIX: New account signup (mode === 'register') or incomplete setup -> enforce setup flow (/verify-identity)
     const tempToken = jwt.sign(
-      { userId: user._id.toString(), googleId, email, fullName: fullName || `${user.firstName} ${user.lastName}`, mode },
+      { userId: user._id.toString(), googleId, email: cleanEmail, fullName: fullName || `${user.firstName} ${user.lastName}`, mode },
       process.env.JWT_SECRET || 'notarychain-dev-jwt-secret-key-2024-change-in-production',
       { expiresIn: '15m' }
     );
@@ -290,14 +298,17 @@ exports.googleAuthInit = async (req, res, next) => {
     return resU.success(res, {
       tempToken,
       mode,
+      needsSetup: true,
       user: {
+        _id: user._id,
         email: user.email,
         fullName: fullName || `${user.firstName} ${user.lastName}`,
         avatar: user.avatar,
-        faceVerified: !!user.faceVerified,
-        hasFaceEnrolled: !!(user.faceEmbedding && user.faceEmbedding.length >= 64)
+        faceVerified: false,
+        hasFaceEnrolled: false,
+        walletConnected: !!user.walletConnected
       }
-    }, 'Google profile verified. Proceeding to verification step.');
+    }, 'Google account initialized. Please complete face/passkey registration & wallet setup.');
   } catch (x) { next(x); }
 };
 
@@ -375,7 +386,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
       };
     }
 
-    let memoryRecord = mongoDbFallbackStore.get(email) || {};
+    let memoryRecord = mongoDbFallbackStore.get(cleanEmail) || {};
 
     // ─────────────────────────────────────────────────────────────
     // 1. PASSKEY AUTHENTICATION FLOW (MONGODB STORED)
@@ -385,13 +396,15 @@ exports.googleVerifyIdentity = async (req, res, next) => {
         const hashedPasskey = await bcrypt.hash(passkey, 12);
         memoryRecord.passkey = hashedPasskey;
         memoryRecord.passkeyVerified = true;
-        mongoDbFallbackStore.set(email, memoryRecord);
+        mongoDbFallbackStore.set(cleanEmail, memoryRecord);
 
         userRecord.passkey = passkey;
         userRecord.passkeyVerified = true;
         userRecord.lastVerification = Date.now();
-        if (mongoose.connection.readyState === 1 && typeof userRecord.save === 'function') {
-          try { await userRecord.save(); } catch (e) {}
+        if (mongoose.connection.readyState === 1) {
+          try {
+            await User.updateOne({ email: cleanEmail }, { $set: { passkey: hashedPasskey, passkeyVerified: true, lastVerification: new Date() } });
+          } catch (e) {}
         }
 
         const registeredUser = require('../utils/helpers').sanitizeUser(userRecord);
@@ -408,8 +421,8 @@ exports.googleVerifyIdentity = async (req, res, next) => {
         }
 
         userRecord.lastVerification = Date.now();
-        if (mongoose.connection.readyState === 1 && typeof userRecord.save === 'function') {
-          try { await userRecord.save(); } catch (e) {}
+        if (mongoose.connection.readyState === 1) {
+          try { await User.updateOne({ email: cleanEmail }, { $set: { lastVerification: new Date() } }); } catch (e) {}
         }
 
         const verifiedUser = require('../utils/helpers').sanitizeUser(userRecord);
@@ -438,14 +451,32 @@ exports.googleVerifyIdentity = async (req, res, next) => {
     if (mode === 'register') {
       memoryRecord.faceEmbedding = current128DDescriptor;
       memoryRecord.faceVerified = true;
-      mongoDbFallbackStore.set(email, memoryRecord);
+      mongoDbFallbackStore.set(cleanEmail, memoryRecord);
 
       userRecord.faceEmbedding = current128DDescriptor;
       userRecord.faceVerified = true;
-      userRecord.verificationDate = Date.now();
-      userRecord.lastVerification = Date.now();
-      if (mongoose.connection.readyState === 1 && typeof userRecord.save === 'function') {
-        try { await userRecord.save(); } catch (e) {}
+      userRecord.verificationDate = new Date();
+      userRecord.lastVerification = new Date();
+
+      // Direct MongoDB write with explicit error logging (BUG 4 FIX)
+      if (mongoose.connection.readyState === 1) {
+        try {
+          await User.updateOne(
+            { $or: [{ _id: userRecord._id }, { email: cleanEmail }] },
+            {
+              $set: {
+                faceEmbedding: current128DDescriptor,
+                faceVerified: true,
+                verificationDate: new Date(),
+                lastVerification: new Date()
+              }
+            }
+          );
+          logger.info(`[googleVerifyIdentity] 128D Face vector (${current128DDescriptor.length} dimensions) saved to MongoDB for ${cleanEmail}`);
+        } catch (dbErr) {
+          logger.error(`[googleVerifyIdentity] MongoDB write failed for ${cleanEmail}:`, dbErr.message);
+          throw new err.InternalError(`MongoDB save failed: ${dbErr.message}`);
+        }
       }
 
       const registeredUser = require('../utils/helpers').sanitizeUser(userRecord);

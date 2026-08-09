@@ -89,5 +89,25 @@ router.get('/balance/:address', protect, async (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/blockchain/connect-wallet
+ * Save verified Web3 wallet address to user's MongoDB document.
+ */
+router.post('/connect-wallet', protect, async (req, res, next) => {
+  try {
+    const { walletAddress } = req.body;
+    if (!walletAddress || typeof walletAddress !== 'string' || !walletAddress.startsWith('0x')) {
+      throw new ApiError.BadRequestError('Valid Ethereum/Polygon wallet address is required (0x...)');
+    }
+    const User = require('../models/User');
+    if (req.user && req.user._id) {
+      await User.findByIdAndUpdate(req.user._id, { walletAddress, walletConnected: true });
+    }
+    resU.success(res, { walletAddress, walletConnected: true }, 'Web3 wallet connected and saved to MongoDB');
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
 

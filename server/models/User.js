@@ -29,6 +29,8 @@ const userSchema = new mongoose.Schema({
   faceEmbedding: [Number],
   passkey: { type: String, default: null },
   passkeyVerified: { type: Boolean, default: false },
+  walletAddress: { type: String, default: null },
+  walletConnected: { type: Boolean, default: false },
   verificationDate: Date,
   lastVerification: Date
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
