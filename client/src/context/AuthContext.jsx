@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../api/axios';
 import { auth, googleProvider, IS_CONFIGURED } from '../config/firebase';
-import { signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
 
 export const AuthContext = createContext();
 
