@@ -52,10 +52,12 @@ const ProtectedRoute = ({ children }) => {
 };
 
 /**
- * AuthGuard — Requires basic login authentication (does not enforce face 2FA so /verify-identity can render).
+ * AuthGuard — Requires basic login authentication or pending verification session so /verify-identity can render.
  */
 const AuthGuard = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, needsVerification, isLoading } = useAuth();
+  const hasPendingAuth = typeof window !== 'undefined' && !!sessionStorage.getItem('pending_google_auth');
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF8F4]">
@@ -63,7 +65,12 @@ const AuthGuard = ({ children }) => {
       </div>
     );
   }
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+
+  if (isAuthenticated || hasPendingAuth || needsVerification) {
+    return children;
+  }
+
+  return <Navigate to="/login" replace />;
 };
 
 /**
