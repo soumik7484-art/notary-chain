@@ -25,44 +25,54 @@ const mongoDbFallbackStore = new Map();
 
 exports.signup = async (req, res, next) => {
   try {
-    const { email, firstName, lastName, role } = req.body;
+    const { email, password, firstName, lastName, role } = req.body;
 
-    if (!email) throw new err.BadRequestError('Email is required');
-
-    if (mongoose.connection.readyState !== 1) {
-      return resU.success(res, {
-        user: {
-          _id: 'demo-user-id',
-          email: email || 'demo@notarychain.com',
-          firstName: firstName || 'Demo',
-          lastName: lastName || 'User',
-          name: `${firstName || 'Demo'} ${lastName || 'User'}`,
-          role: role || 'company',
-          isEmailVerified: true
-        },
-        tokens: {
-          accessToken: 'demo-access-token',
-          refreshToken: 'demo-refresh-token'
-        }
-      });
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      throw new err.BadRequestError('Email address is required');
+    }
+    if (!password || typeof password !== 'string' || !password.trim()) {
+      throw new err.BadRequestError('Password is required');
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    if (await User.findOne({ email: cleanEmail })) throw new err.ConflictError('An account with this email already exists.');
-    
-    const u = await User.create({
-      ...req.body,
+
+    if (mongoose.connection.readyState !== 1) {
+      const demoUser = {
+        _id: new mongoose.Types.ObjectId().toString(),
+        email: cleanEmail,
+        firstName: firstName || cleanEmail.split('@')[0],
+        lastName: lastName || 'User',
+        name: `${firstName || 'Demo'} ${lastName || 'User'}`,
+        role: role || 'company',
+        isEmailVerified: true
+      };
+      const tokens = t.generateTokenPair(demoUser._id);
+      return resU.success(res, { user: demoUser, tokens });
+    }
+
+    const existingUser = await User.findOne({ email: cleanEmail });
+    if (existingUser) {
+      throw new err.ConflictError('An account with this email address already exists.');
+    }
+
+    const u = new User({
       email: cleanEmail,
+      password,
       firstName: firstName || cleanEmail.split('@')[0],
       lastName: lastName || 'User',
-      role: role || 'company'
+      phone: req.body.phone || '',
+      role: role || 'company',
+      isEmailVerified: false
     });
+
     const tk = u.createEmailVerificationToken();
     await u.save();
 
     try {
       await e.sendVerificationEmail(u.email, u.firstName, tk);
-    } catch (sendErr) {}
+    } catch (sendErr) {
+      logger.warn('[signup] Email verification send warning:', sendErr.message);
+    }
     
     const tokens = t.generateTokenPair(u._id);
 
@@ -74,11 +84,13 @@ exports.signup = async (req, res, next) => {
       await LoginHistory.create({ userId: u._id, status: 'success', ...(req.deviceInfo || {}) });
       await a.auditAction(u._id, 'signup', 'auth', req.deviceInfo || {});
     } catch (sideErr) {
-      logger.warn('[signup] Side-effect warning:', sideErr.message);
+      logger.warn('[signup] Optional side-effect warning:', sideErr.message);
     }
 
-    resU.success(res, { user: require('../utils/helpers').sanitizeUser(u), tokens });
-  } catch (x) { next(x); }
+    return resU.success(res, { user: require('../utils/helpers').sanitizeUser(u), tokens }, 'Account created successfully');
+  } catch (x) {
+    next(x);
+  }
 };
 
 exports.login = async (req, res, next) => {

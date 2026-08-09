@@ -49,7 +49,7 @@ userSchema.pre('save', async function(next) {
     this.password = await bcrypt.hash(this.password, 12);
   }
   // Hash security passkey if modified
-  if (this.isModified('passkey') && this.passkey && !this.passkey.startsWith('$2a$') && !this.passkey.startsWith('$2b$')) {
+  if (this.isModified('passkey') && typeof this.passkey === 'string' && this.passkey.trim() !== '' && !this.passkey.startsWith('$2a$') && !this.passkey.startsWith('$2b$')) {
     this.passkey = await bcrypt.hash(this.passkey, 12);
   }
   next();
