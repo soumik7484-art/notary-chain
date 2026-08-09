@@ -11,6 +11,30 @@ const a = require('../middleware/auditLogger');
 const resU = require('../utils/apiResponse');
 const err = require('../utils/apiError');
 const faceService = require('../services/faceRecognitionService');
+const env = require('../config/env');
+
+const isDbReady = () => mongoose.connection.readyState === 1;
+const demoModeEnabled = env.ALLOW_DEMO_AUTH;
+
+const ensureDb = () => {
+  if (isDbReady()) return true;
+  if (demoModeEnabled) return false;
+  throw new err.ServiceUnavailableError('Database is unavailable. Start MongoDB or set ALLOW_DEMO_AUTH=true for local demo mode.');
+};
+
+const buildDemoUser = (override = {}) => {
+  const firstName = override.firstName || DEMO_USER.firstName;
+  const lastName = override.lastName || DEMO_USER.lastName;
+  const name = override.name || `${firstName} ${lastName}`;
+  return {
+    ...DEMO_USER,
+    ...override,
+    firstName,
+    lastName,
+    name,
+    email: override.email || DEMO_USER.email
+  };
+};
 
 // Fallback memory store when MongoDB offline
 const mongoDbFallbackStore = new Map();
@@ -29,18 +53,17 @@ const DEMO_USER = {
 
 exports.signup = async (req, res, next) => {
   try {
-    const { email, firstName, lastName, role } = req.body;
+    const { email, firstName, lastName, role, password } = req.body;
 
-    if (mongoose.connection.readyState !== 1) {
-      const demoUser = {
-        ...DEMO_USER,
-        _id: 'demo-user-123',
-        firstName: firstName || 'Ada',
-        lastName: lastName || 'Lovelace',
-        name: `${firstName || 'Ada'} ${lastName || 'Lovelace'}`,
-        email: email || 'ada@example.com',
-        role: role || 'company'
-      };
+    const dbReady = ensureDb();
+    if (!dbReady) {
+      const existing = mongoDbFallbackStore.get(email);
+      if (existing?.passwordHash) throw new err.ConflictError('Email taken');
+
+      const hashedPassword = await bcrypt.hash(password || 'demo-password', 12);
+      const demoUser = buildDemoUser({ email, firstName, lastName });
+      mongoDbFallbackStore.set(email, { passwordHash: hashedPassword, user: demoUser });
+
       const tokens = t.generateTokenPair(demoUser._id);
       return resU.success(res, { user: demoUser, tokens });
     }
@@ -65,13 +88,24 @@ exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (mongoose.connection.readyState !== 1) {
-      const demoUser = {
-        ...DEMO_USER,
-        email: email || 'ada@example.com'
-      };
-      const tokens = t.generateTokenPair(demoUser._id);
-      return resU.success(res, { user: demoUser, tokens });
+    const dbReady = ensureDb();
+    if (!dbReady) {
+      const memoryRecord = mongoDbFallbackStore.get(email) || {};
+      if (!memoryRecord.passwordHash) {
+        if (!password) throw new err.BadRequestError('Password is required');
+        memoryRecord.passwordHash = await bcrypt.hash(password, 12);
+        memoryRecord.user = buildDemoUser({ email });
+        mongoDbFallbackStore.set(email, memoryRecord);
+      }
+
+      const isMatch = await bcrypt.compare(password || '', memoryRecord.passwordHash).catch(() => false);
+      if (!isMatch) {
+        throw new err.UnauthorizedError('Invalid credentials');
+      }
+
+      const user = memoryRecord.user || buildDemoUser({ email });
+      const tokens = t.generateTokenPair(user._id || user.id);
+      return resU.success(res, { user, tokens });
     }
 
     const u = await User.findOne({ email });
@@ -95,9 +129,7 @@ exports.login = async (req, res, next) => {
 
 exports.verifyEmail = async (req, res, next) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return resU.success(res, null, 'Email verified');
-    }
+    ensureDb();
     const ht = require('crypto').createHash('sha256').update(req.params.token).digest('hex');
     const u = await User.findOne({ emailVerificationToken: ht, emailVerificationExpires: { $gt: Date.now() } });
     if (!u) throw new err.BadRequestError('Invalid token');
@@ -109,9 +141,7 @@ exports.verifyEmail = async (req, res, next) => {
 
 exports.forgotPassword = async (req, res, next) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return resU.success(res, null, 'Email sent');
-    }
+    ensureDb();
     const u = await User.findOne({ email: req.body.email });
     if (!u) throw new err.NotFoundError();
     const tk = u.createPasswordResetToken();
@@ -123,9 +153,7 @@ exports.forgotPassword = async (req, res, next) => {
 
 exports.resetPassword = async (req, res, next) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return resU.success(res, null, 'Password reset');
-    }
+    ensureDb();
     const ht = require('crypto').createHash('sha256').update(req.params.token).digest('hex');
     const u = await User.findOne({ passwordResetToken: ht, passwordResetExpires: { $gt: Date.now() } });
     if (!u) throw new err.BadRequestError('Invalid token');
@@ -140,8 +168,11 @@ exports.refreshToken = async (req, res, next) => {
     const rt = req.body.token;
     if (!rt) throw new err.UnauthorizedError();
     
-    if (mongoose.connection.readyState !== 1) {
-      return resU.success(res, t.generateTokenPair('demo-user-123'));
+    const dbReady = ensureDb();
+    if (!dbReady) {
+      const decoded = t.verifyRefreshToken(rt);
+      if (!decoded || !decoded.id) throw new err.UnauthorizedError();
+      return resU.success(res, t.generateTokenPair(decoded.id));
     }
 
     const decoded = t.verifyRefreshToken(rt);

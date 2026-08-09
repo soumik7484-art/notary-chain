@@ -10,19 +10,19 @@ export const DOCUMENT_STATUS = {
 };
 
 export const STATUS_COLORS = {
-  [DOCUMENT_STATUS.DRAFT]: 'bg-gray-500',
+  [DOCUMENT_STATUS.DRAFT]: 'bg-stone-500',
   [DOCUMENT_STATUS.PENDING_VERIFICATION]: 'bg-amber-500',
-  [DOCUMENT_STATUS.UNDER_REVIEW]: 'bg-blue-500',
+  [DOCUMENT_STATUS.UNDER_REVIEW]: 'bg-emerald-600',
   [DOCUMENT_STATUS.APPROVED]: 'bg-emerald-500',
   [DOCUMENT_STATUS.REJECTED]: 'bg-rose-500',
-  [DOCUMENT_STATUS.NOTARIZED]: 'bg-violet-500'
+  [DOCUMENT_STATUS.NOTARIZED]: 'bg-emerald-700'
 };
 
 export const ROLE_COLORS = {
-  [ROLES.ADMIN]: 'bg-rose-500',
-  [ROLES.COMPANY]: 'bg-indigo-500',
+  [ROLES.ADMIN]: 'bg-stone-700',
+  [ROLES.COMPANY]: 'bg-emerald-600',
   [ROLES.BANK]: 'bg-emerald-500',
-  [ROLES.NOTARY]: 'bg-violet-500'
+  [ROLES.NOTARY]: 'bg-emerald-800'
 };
 
 export const SIDEBAR_MENUS = {

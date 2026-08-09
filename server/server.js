@@ -23,7 +23,13 @@ app.use(cookieParser());
 app.use(extractDeviceInfo);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date(), uptime: process.uptime(), environment: env.NODE_ENV });
+  res.json({
+    success: true,
+    service: 'NotaryChain API',
+    status: 'healthy',
+    timestamp: new Date(),
+    environment: env.NODE_ENV
+  });
 });
 
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -47,9 +53,15 @@ app.use(errorHandler);
 const start = async () => {
   try {
     await connectDB();
-    app.listen(env.PORT, () => logger.info(`Server running on port ${env.PORT}`));
+    app.listen(env.PORT, () => {
+      logger.info('[NotaryChain API] Environment: %s', env.NODE_ENV);
+      logger.info('[NotaryChain API] Host: localhost');
+      logger.info('[NotaryChain API] Port: %s', env.PORT);
+      logger.info('[NotaryChain API] Database: connected');
+      logger.info('[NotaryChain API] API: ready');
+    });
   } catch (e) {
-    logger.error('Startup error', e);
+    logger.error('Startup error', { message: e.message });
     process.exit(1);
   }
 };
