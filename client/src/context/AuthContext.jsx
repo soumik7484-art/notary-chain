@@ -61,25 +61,55 @@ export const AuthProvider = ({ children }) => {
       throw new Error(errorMsg || `Google authentication failed for ${firebaseUser.email}.`);
     }
 
-    if (!payload || !payload.tempToken) {
+    if (!payload) {
       throw new Error(`Failed to initialize session for ${firebaseUser.email}. Please try again.`);
     }
 
     const tempToken = payload?.tempToken;
     const backendUser = payload?.user;
+    const tokens = payload?.tokens;
 
-    // Store real JWT tempToken in sessionStorage for 2-step verification
+    const mergedUser = { ...googleUser, ...backendUser, avatar: photo || backendUser?.avatar };
+
+    // If backend issued full access tokens directly (2FA disabled or completed)
+    if (tokens?.accessToken) {
+      localStorage.setItem('accessToken', tokens.accessToken);
+      if (tokens.refreshToken) localStorage.setItem('refreshToken', tokens.refreshToken);
+      localStorage.setItem('face_verified', 'true');
+      localStorage.setItem('user_session', JSON.stringify(mergedUser));
+      setNeedsVerification(false);
+      setUser(mergedUser);
+      return { user: mergedUser, autoLoggedIn: true };
+    }
+
+    // Otherwise store pending tempToken for 2-step verification
     sessionStorage.setItem('pending_google_auth', JSON.stringify({
       tempToken: tempToken,
-      user: { ...googleUser, ...backendUser },
+      user: mergedUser,
       mode: mode
     }));
 
-    const mergedUser = { ...googleUser, ...backendUser, avatar: photo || backendUser?.avatar };
-    return { user: mergedUser, tempToken: tempToken };
+    return { user: mergedUser, tempToken: tempToken, autoLoggedIn: false };
   }, []);
 
   useEffect(() => {
+    let unsubscribeFirebase = () => {};
+
+    // 1. Listen for Firebase Auth state changes
+    if (IS_CONFIGURED && auth) {
+      unsubscribeFirebase = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser && !localStorage.getItem('accessToken') && !sessionStorage.getItem('pending_google_auth')) {
+          console.log('[Firebase Auth State Changed] Active Google session detected:', firebaseUser.email);
+          try {
+            await completeGoogleAuth(firebaseUser, 'login');
+          } catch (e) {
+            console.warn('[Firebase Auth Auto-Sync Warning]:', e.message);
+          }
+        }
+      });
+    }
+
+    // 2. Initialize application session
     const initAuth = async () => {
       // Check for Firebase redirect result first (Google OAuth redirect flow)
       if (IS_CONFIGURED && auth) {
@@ -130,7 +160,10 @@ export const AuthProvider = ({ children }) => {
       }
       setIsLoading(false);
     };
+
     initAuth();
+
+    return () => unsubscribeFirebase();
   }, [completeGoogleAuth]);
 
   const login = useCallback(async (email, password) => {

@@ -262,6 +262,25 @@ exports.googleAuthInit = async (req, res, next) => {
       };
     }
 
+    const requireFace2FA = process.env.REQUIRE_FACE_2FA === 'true';
+
+    if (!requireFace2FA || user.faceVerified) {
+      const tokens = t.generateTokenPair(user._id || 'demo-user-id');
+      return resU.success(res, {
+        tokens,
+        mode,
+        user: {
+          _id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role || 'company',
+          avatar: user.avatar,
+          faceVerified: true
+        }
+      }, 'Google sign-in completed successfully!');
+    }
+
     const tempToken = jwt.sign(
       { userId: user._id.toString(), googleId, email, fullName: fullName || `${user.firstName} ${user.lastName}`, mode },
       process.env.JWT_SECRET || 'notarychain-dev-jwt-secret-key-2024-change-in-production',
@@ -278,7 +297,7 @@ exports.googleAuthInit = async (req, res, next) => {
         faceVerified: !!user.faceVerified,
         hasFaceEnrolled: !!(user.faceEmbedding && user.faceEmbedding.length >= 64)
       }
-    }, 'Google profile verified. Proceed to Identity Verification.');
+    }, 'Google profile verified. Proceeding to verification step.');
   } catch (x) { next(x); }
 };
 
