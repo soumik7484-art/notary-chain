@@ -27,6 +27,8 @@ exports.signup = async (req, res, next) => {
   try {
     const { email, firstName, lastName, role } = req.body;
 
+    if (!email) throw new err.BadRequestError('Email is required');
+
     if (mongoose.connection.readyState !== 1) {
       return resU.success(res, {
         user: {
@@ -45,18 +47,33 @@ exports.signup = async (req, res, next) => {
       });
     }
 
-    if (await User.findOne({ email })) throw new err.ConflictError('Email taken');
-    const u = await User.create(req.body);
+    const cleanEmail = email.toLowerCase().trim();
+    if (await User.findOne({ email: cleanEmail })) throw new err.ConflictError('An account with this email already exists.');
+    
+    const u = await User.create({
+      ...req.body,
+      email: cleanEmail
+    });
     const tk = u.createEmailVerificationToken();
     await u.save();
+
     try {
       await e.sendVerificationEmail(u.email, u.firstName, tk);
-    } catch (err) {}
+    } catch (sendErr) {}
     
     const tokens = t.generateTokenPair(u._id);
-    await Session.create({ userId: u._id, token: await t.hashToken(tokens.refreshToken), ...req.deviceInfo });
-    await LoginHistory.create({ userId: u._id, status: 'success', ...req.deviceInfo });
-    await a.auditAction(u._id, 'signup', 'auth', req.deviceInfo);
+
+    try {
+      if (tokens.refreshToken) {
+        const hashedRt = await t.hashToken(tokens.refreshToken);
+        await Session.create({ userId: u._id, token: hashedRt, ...(req.deviceInfo || {}) });
+      }
+      await LoginHistory.create({ userId: u._id, status: 'success', ...(req.deviceInfo || {}) });
+      await a.auditAction(u._id, 'signup', 'auth', req.deviceInfo || {});
+    } catch (sideErr) {
+      logger.warn('[signup] Side-effect warning:', sideErr.message);
+    }
+
     resU.success(res, { user: require('../utils/helpers').sanitizeUser(u), tokens });
   } catch (x) { next(x); }
 };
@@ -64,6 +81,10 @@ exports.signup = async (req, res, next) => {
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      throw new err.BadRequestError('Email and password are required');
+    }
 
     if (mongoose.connection.readyState !== 1) {
       const demoRole = email?.includes('admin') ? 'admin' : email?.includes('bank') ? 'bank' : 'company';
@@ -84,21 +105,35 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    const u = await User.findOne({ email });
+    const cleanEmail = email.toLowerCase().trim();
+    const u = await User.findOne({ email: cleanEmail });
     if (!u || !(await u.comparePassword(password))) {
       if (u) {
-        await LoginHistory.create({ userId: u._id, status: 'failure', ...req.deviceInfo });
+        try { await LoginHistory.create({ userId: u._id, status: 'failure', ...(req.deviceInfo || {}) }); } catch (e) {}
       }
-      throw new err.UnauthorizedError('Invalid credentials');
+      throw new err.UnauthorizedError('Invalid email or password');
     }
     
     const tokens = t.generateTokenPair(u._id);
-    u.refreshTokens.push({ token: await t.hashToken(tokens.refreshToken), createdAt: Date.now(), expiresAt: Date.now() + 7 * 24 * 3600 * 1000 });
-    u.lastLogin = Date.now(); u.loginCount += 1;
-    await u.save();
-    await Session.create({ userId: u._id, token: await t.hashToken(tokens.refreshToken), ...req.deviceInfo });
-    await LoginHistory.create({ userId: u._id, status: 'success', ...req.deviceInfo });
-    await a.auditAction(u._id, 'login', 'auth', req.deviceInfo);
+    try {
+      if (tokens.refreshToken) {
+        const hashedRt = await t.hashToken(tokens.refreshToken);
+        u.refreshTokens.push({ token: hashedRt, createdAt: Date.now(), expiresAt: Date.now() + 7 * 24 * 3600 * 1000 });
+      }
+      u.lastLogin = Date.now();
+      u.loginCount = (u.loginCount || 0) + 1;
+      await u.save();
+
+      if (tokens.refreshToken) {
+        const hashedRt = await t.hashToken(tokens.refreshToken);
+        await Session.create({ userId: u._id, token: hashedRt, ...(req.deviceInfo || {}) });
+      }
+      await LoginHistory.create({ userId: u._id, status: 'success', ...(req.deviceInfo || {}) });
+      await a.auditAction(u._id, 'login', 'auth', req.deviceInfo || {});
+    } catch (sideErr) {
+      logger.warn('[login] Side-effect warning:', sideErr.message);
+    }
+
     resU.success(res, { user: require('../utils/helpers').sanitizeUser(u), tokens });
   } catch (x) { next(x); }
 };
