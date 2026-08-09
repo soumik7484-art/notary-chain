@@ -11,7 +11,10 @@ const r         = require('../utils/apiResponse');
 const logger    = require('../utils/logger');
 
 /* ─── Multer – store uploads to disk ──────────────────────────── */
-const uploadDir = path.join(__dirname, '..', 'uploads');
+const isVercel = !!process.env.VERCEL;
+const uploadDir = isVercel
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
