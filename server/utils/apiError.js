@@ -8,7 +8,6 @@ class NotFoundError extends ApiError { constructor(m = 'Not Found') { super(m, 4
 class ConflictError extends ApiError { constructor(m = 'Conflict') { super(m, 409); } }
 class ValidationError extends ApiError { constructor(m = 'Validation Error', e) { super(m, 422); this.errors = e; } }
 class TooManyRequestsError extends ApiError { constructor(m = 'Too Many Requests') { super(m, 429); } }
-class ServiceUnavailableError extends ApiError { constructor(m = 'Service Unavailable') { super(m, 503); } }
 class InternalError extends ApiError { constructor(m = 'Internal Server Error') { super(m, 500); } }
 
-module.exports = { ApiError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, ValidationError, TooManyRequestsError, ServiceUnavailableError, InternalError };
+module.exports = { ApiError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, ValidationError, TooManyRequestsError, InternalError };

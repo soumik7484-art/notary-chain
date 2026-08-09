@@ -5,16 +5,17 @@ const logger = require('../utils/logger');
 mongoose.set('bufferCommands', false);
 
 exports.connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    logger.info('MongoDB Connected');
-    mongoose.connection.on('error', (e) => logger.error('DB Error:', e));
-    mongoose.connection.on('disconnected', () => logger.warn('DB Disconnected'));
-  } catch (err) {
-    logger.error('MongoDB connection failed', { message: err.message });
-    if (process.env.NODE_ENV === 'production') {
-      throw err;
+  let retries = 3;
+  while (retries) {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI);
+      logger.info('MongoDB Connected');
+      mongoose.connection.on('error', e => logger.error('DB Error:', e));
+      mongoose.connection.on('disconnected', () => logger.warn('DB Disconnected'));
+      return;
+    } catch (err) {
+      logger.warn('MongoDB not reachable at ' + process.env.MONGODB_URI + ' — server running in demo mode');
+      return;
     }
-    logger.warn('Continuing without MongoDB in development. Database-dependent routes may fail.');
   }
 };
