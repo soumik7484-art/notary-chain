@@ -304,6 +304,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
 
     const rawEmail = payload.email || reqEmail || (req.user ? req.user.email : null);
     const cleanEmail = (rawEmail || '').toLowerCase().trim();
+    const email = cleanEmail;
     const userId = payload.userId || reqUserId || (req.user ? req.user._id : null);
     const mode = clientMode || payload.mode || 'login';
 
