@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
-// Disable Mongoose command buffering so queries fail-fast when MongoDB is offline
-mongoose.set('bufferCommands', false);
+// Enable Mongoose command buffering so serverless cold-starts await DB connection
+mongoose.set('bufferCommands', true);
 
 exports.connectDB = async () => {
   let retries = 3;
