@@ -225,15 +225,13 @@ exports.googleAuthInit = async (req, res, next) => {
     const firstName = nameParts[0] || 'Google';
     const lastName = nameParts.slice(1).join(' ') || 'User';
 
+    const cleanEmail = (email || '').toLowerCase().trim();
     let user;
     if (mongoose.connection.readyState === 1) {
-      user = await User.findOne({ $or: [{ googleId }, { email }] });
+      user = await User.findOne({ $or: [{ googleId }, { email: cleanEmail }] });
       if (!user) {
-        if (mode === 'login') {
-          throw new err.NotFoundError(`Account does not exist! No registered account found for ${email}. Please sign up first.`);
-        }
         user = await User.create({
-          email,
+          email: cleanEmail,
           firstName,
           lastName,
           avatar,
@@ -244,9 +242,6 @@ exports.googleAuthInit = async (req, res, next) => {
           faceVerified: false
         });
       } else {
-        if (mode === 'register') {
-          throw new err.ConflictError(`An account already exists with ${email}. Please sign in instead.`);
-        }
         if (!user.googleId) {
           user.googleId = googleId;
           user.authProvider = 'google';
@@ -257,7 +252,7 @@ exports.googleAuthInit = async (req, res, next) => {
     } else {
       user = {
         _id: 'demo-google-user',
-        email,
+        email: cleanEmail || 'google-user@notarychain.com',
         firstName,
         lastName,
         name: fullName || `${firstName} ${lastName}`,

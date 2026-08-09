@@ -58,20 +58,11 @@ export const AuthProvider = ({ children }) => {
     } catch (backendErr) {
       console.warn('[Google OAuth Backend Init Error]:', backendErr);
       const errorMsg = backendErr.response?.data?.message || backendErr.message || '';
-      
-      if (mode === 'login') {
-        throw new Error(errorMsg || `Account not found for ${firebaseUser.email}. Please create an account first.`);
-      } else if (mode === 'register') {
-        throw new Error(errorMsg || `An account already exists for ${firebaseUser.email}. Please sign in instead.`);
-      }
+      throw new Error(errorMsg || `Google authentication failed for ${firebaseUser.email}.`);
     }
 
     if (!payload || !payload.tempToken) {
-      if (mode === 'login') {
-        throw new Error(`Account not found for ${firebaseUser.email}. Please create an account first.`);
-      } else if (mode === 'register') {
-        throw new Error(`An account already exists for ${firebaseUser.email}. Please sign in instead.`);
-      }
+      throw new Error(`Failed to initialize session for ${firebaseUser.email}. Please try again.`);
     }
 
     const tempToken = payload?.tempToken;
