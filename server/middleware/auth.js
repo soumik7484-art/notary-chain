@@ -11,6 +11,10 @@ const DEMO_USER = {
   isActive: true
 };
 
+const mongoose = require('mongoose');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'notarychain-dev-jwt-secret-key-2024-change-in-production';
+
 exports.protect = async (req, res, next) => {
   try {
     let token;
@@ -19,10 +23,13 @@ exports.protect = async (req, res, next) => {
     }
     if (token && token !== 'demo-token' && token !== 'null' && token !== 'undefined') {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = await User.findById(decoded.id).select('-password');
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const uId = decoded?.id || decoded?.userId;
+        if (uId && mongoose.Types.ObjectId.isValid(uId)) {
+          req.user = await User.findById(uId).select('-password');
+        }
       } catch (e) {
-        // Fallback to demo user if JWT is invalid or local DB is not seeded
+        // Token invalid or expired
       }
     }
     
@@ -42,9 +49,14 @@ exports.optionalAuth = async (req, res, next) => {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
-      if (token && token !== 'demo-token') {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = await User.findById(decoded.id).select('-password');
+      if (token && token !== 'demo-token' && token !== 'null' && token !== 'undefined') {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          const uId = decoded?.id || decoded?.userId;
+          if (uId && mongoose.Types.ObjectId.isValid(uId)) {
+            req.user = await User.findById(uId).select('-password');
+          }
+        } catch (e) {}
       }
     }
     if (!req.user) {
@@ -65,11 +77,14 @@ exports.protectVerified = async (req, res, next) => {
     }
     if (token && token !== 'demo-token' && token !== 'null' && token !== 'undefined') {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, JWT_SECRET);
         if (!decoded.faceVerified && process.env.NODE_ENV === 'production') {
           return res.status(403).json({ success: false, code: 'FACE_VERIFICATION_REQUIRED', message: 'Face verification required' });
         }
-        req.user = await User.findById(decoded.id).select('-password');
+        const uId = decoded?.id || decoded?.userId;
+        if (uId && mongoose.Types.ObjectId.isValid(uId)) {
+          req.user = await User.findById(uId).select('-password');
+        }
       } catch (e) {}
     }
     if (!req.user) {

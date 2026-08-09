@@ -206,9 +206,11 @@ exports.logout = async (req, res, next) => {
   } catch (x) { next(x); }
 };
 
-exports.getMe = async (req, res) => {
-  if (!req.user) throw new err.UnauthorizedError('User session invalid');
-  resU.success(res, require('../utils/helpers').sanitizeUser(req.user));
+exports.getMe = async (req, res, next) => {
+  try {
+    if (!req.user) throw new err.UnauthorizedError('User session invalid');
+    resU.success(res, require('../utils/helpers').sanitizeUser(req.user));
+  } catch (x) { next(x); }
 };
 
 exports.getSessions = async (req, res, next) => {
