@@ -59,15 +59,18 @@ export const AuthProvider = ({ children }) => {
       console.warn('[Google OAuth Backend Init Error]:', backendErr);
       const errorMsg = backendErr.response?.data?.message || backendErr.message || '';
       
-      // If user tries to LOGIN with an unregistered Google account, block login and ask to create an account first
       if (mode === 'login') {
         throw new Error(errorMsg || `Account not found for ${firebaseUser.email}. Please create an account first.`);
+      } else if (mode === 'register') {
+        throw new Error(errorMsg || `An account already exists for ${firebaseUser.email}. Please sign in instead.`);
       }
     }
 
     if (!payload || !payload.tempToken) {
       if (mode === 'login') {
         throw new Error(`Account not found for ${firebaseUser.email}. Please create an account first.`);
+      } else if (mode === 'register') {
+        throw new Error(`An account already exists for ${firebaseUser.email}. Please sign in instead.`);
       }
     }
 

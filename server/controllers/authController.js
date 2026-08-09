@@ -226,11 +226,16 @@ exports.googleAuthInit = async (req, res, next) => {
           role: 'company',
           faceVerified: false
         });
-      } else if (!user.googleId) {
-        user.googleId = googleId;
-        user.authProvider = 'google';
-        if (avatar && !user.avatar) user.avatar = avatar;
-        await user.save();
+      } else {
+        if (mode === 'register') {
+          throw new err.ConflictError(`An account already exists with ${email}. Please sign in instead.`);
+        }
+        if (!user.googleId) {
+          user.googleId = googleId;
+          user.authProvider = 'google';
+          if (avatar && !user.avatar) user.avatar = avatar;
+          await user.save();
+        }
       }
     } else {
       user = {
