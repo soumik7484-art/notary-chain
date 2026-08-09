@@ -29,7 +29,7 @@ const ABI = require('../contracts/NotaryChain.json').abi;
 // ── Constants ────────────────────────────────────────────────────────────────
 const POLYGON_AMOY_CHAIN_ID = 80002n;
 const BLOCK_EXPLORER        = 'https://amoy.polygonscan.com';
-const DEFAULT_RPC           = 'https://rpc-amoy.polygon.technology';
+const DEFAULT_RPC           = 'https://polygon-amoy-bor-rpc.publicnode.com';
 
 class BlockchainService {
   constructor () {
