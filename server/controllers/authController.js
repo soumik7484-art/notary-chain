@@ -428,18 +428,23 @@ exports.googleVerifyIdentity = async (req, res, next) => {
     // 1. PASSKEY AUTHENTICATION FLOW (MONGODB STORED)
     // ─────────────────────────────────────────────────────────────
     if (passkey) {
-      if (mode === 'register' || !userRecord?.passkey) {
+      const dbPasskey = userRecord?.passkey || memoryRecord.passkey;
+
+      if (mode === 'register' || !dbPasskey) {
         const hashedPasskey = await bcrypt.hash(passkey, 12);
         memoryRecord.passkey = hashedPasskey;
         memoryRecord.passkeyVerified = true;
         mongoDbFallbackStore.set(cleanEmail, memoryRecord);
 
-        userRecord.passkey = passkey;
+        userRecord.passkey = hashedPasskey;
         userRecord.passkeyVerified = true;
         userRecord.lastVerification = Date.now();
         if (mongoose.connection.readyState === 1) {
           try {
-            await User.updateOne({ email: cleanEmail }, { $set: { passkey: hashedPasskey, passkeyVerified: true, lastVerification: new Date() } });
+            await User.updateOne(
+              { $or: [{ _id: userRecord._id }, { email: cleanEmail }] },
+              { $set: { passkey: hashedPasskey, passkeyVerified: true, lastVerification: new Date() } }
+            );
           } catch (e) {}
         }
 
@@ -449,11 +454,17 @@ exports.googleVerifyIdentity = async (req, res, next) => {
         const tokens = { accessToken, refreshToken };
         return resU.success(res, { user: registeredUser, tokens }, 'Security passkey enrolled in MongoDB successfully!');
       } else {
-        const dbPasskey = userRecord?.passkey || memoryRecord.passkey;
-        const isMatch = await bcrypt.compare(passkey || '', dbPasskey).catch(() => false);
+        let isMatch = false;
+        if (dbPasskey) {
+          if (dbPasskey.startsWith('$2a$') || dbPasskey.startsWith('$2b$')) {
+            isMatch = await bcrypt.compare(passkey || '', dbPasskey).catch(() => false);
+          } else {
+            isMatch = (passkey === dbPasskey);
+          }
+        }
 
         if (!isMatch) {
-          throw new err.BadRequestError(`Invalid Passkey! Entered passkey does not match registered passkey in MongoDB.`);
+          throw new err.UnauthorizedError('Invalid Passkey! Entered passkey does not match registered passkey in MongoDB.');
         }
 
         userRecord.lastVerification = Date.now();

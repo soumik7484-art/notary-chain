@@ -338,25 +338,14 @@ const IdentityVerification = () => {
     setVerificationError('');
 
     try {
-      let data;
-      try {
-        const res = await axiosInstance.post('/auth/google/verify-identity', {
-          tempToken,
-          passkey,
-          mode
-        });
-        data = res?.data?.data ?? res?.data;
-      } catch {
-        data = {
-          user: pendingUser || {
-            _id: 'demo-google-user-123',
-            name: 'Verified User',
-            email: 'user@notarychain.com',
-            role: 'company'
-          },
-          tokens: { accessToken: 'demo-token', refreshToken: 'demo-refresh-token' }
-        };
-      }
+      const res = await axiosInstance.post('/auth/google/verify-identity', {
+        tempToken,
+        passkey,
+        mode,
+        email: profileEmail || pendingUser?.email,
+        userId: pendingUser?._id
+      });
+      const data = res?.data?.data ?? res?.data;
 
       if (data?.tokens?.accessToken) {
         localStorage.setItem('accessToken', data.tokens.accessToken);
