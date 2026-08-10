@@ -22,8 +22,18 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(extractDeviceInfo);
 
+const mongoose = require('mongoose');
+
 // Connect DB asynchronously without blocking server export
 connectDB().catch(err => logger.warn('DB connect warning:', err));
+
+// Auto-reconnect DB middleware for serverless / cold starts
+app.use(async (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    await connectDB().catch(err => logger.warn('DB connect error in middleware:', err.message));
+  }
+  next();
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date(), uptime: process.uptime(), environment: env.NODE_ENV });

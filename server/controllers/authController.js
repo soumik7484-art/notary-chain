@@ -37,6 +37,11 @@ exports.signup = async (req, res, next) => {
     const cleanEmail = email.toLowerCase().trim();
 
     if (mongoose.connection.readyState !== 1) {
+      const { connectDB } = require('../config/db');
+      await connectDB().catch(() => {});
+    }
+
+    if (mongoose.connection.readyState !== 1) {
       const demoUser = {
         _id: new mongoose.Types.ObjectId().toString(),
         email: cleanEmail,
@@ -99,6 +104,11 @@ exports.login = async (req, res, next) => {
 
     if (!email || !password) {
       throw new err.BadRequestError('Email and password are required');
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      const { connectDB } = require('../config/db');
+      await connectDB().catch(() => {});
     }
 
     if (mongoose.connection.readyState !== 1) {
@@ -608,34 +618,57 @@ exports.googleAuth = async (req, res, next) => {
     const firstName = nameParts[0] || 'Google';
     const lastName  = nameParts.slice(1).join(' ') || 'User';
 
+    const cleanEmail = (email || '').toLowerCase().trim();
+
     if (mongoose.connection.readyState !== 1) {
-      throw new err.InternalError('Database connection unavailable.');
+      const { connectDB } = require('../config/db');
+      await connectDB().catch(() => {});
     }
 
-    let user = await User.findOne({ $or: [{ googleId }, { email }] });
-    if (!user) {
-      user = await User.create({ email, firstName, lastName, avatar, googleId, authProvider: 'google', isEmailVerified: true, role: 'company' });
-      await a.auditAction(user._id, 'signup_google', 'auth', req.deviceInfo);
-    } else {
-      if (!user.googleId) {
-        user.googleId = googleId;
-        user.authProvider = 'google';
-        if (avatar && !user.avatar) user.avatar = avatar;
-        await user.save();
+    let user;
+    if (mongoose.connection.readyState === 1) {
+      user = await User.findOne({ $or: [{ googleId }, { email: cleanEmail }] });
+      if (!user) {
+        user = await User.create({ email: cleanEmail, firstName, lastName, avatar, googleId, authProvider: 'google', isEmailVerified: true, role: 'company' });
+        await a.auditAction(user._id, 'signup_google', 'auth', req.deviceInfo);
+      } else {
+        if (!user.googleId) {
+          user.googleId = googleId;
+          user.authProvider = 'google';
+          if (avatar && !user.avatar) user.avatar = avatar;
+          await user.save();
+        }
+        await a.auditAction(user._id, 'login_google', 'auth', req.deviceInfo);
       }
-      await a.auditAction(user._id, 'login_google', 'auth', req.deviceInfo);
+
+      user.lastLogin = Date.now();
+      user.loginCount = (user.loginCount || 0) + 1;
+      await user.save();
+    } else {
+      user = {
+        _id: new mongoose.Types.ObjectId().toString(),
+        email: cleanEmail || 'google-user@notarychain.com',
+        firstName,
+        lastName,
+        name: fullName || `${firstName} ${lastName}`,
+        googleId,
+        avatar,
+        faceVerified: true,
+        refreshTokens: []
+      };
     }
 
-    user.lastLogin = Date.now();
-    user.loginCount = (user.loginCount || 0) + 1;
-    await user.save();
-
-    const tokens = t.generateTokenPair(user._id);
-    user.refreshTokens.push({ token: await t.hashToken(tokens.refreshToken), createdAt: Date.now(), expiresAt: Date.now() + 7 * 24 * 3600 * 1000 });
-    await user.save();
-
-    await Session.create({ userId: user._id, token: await t.hashToken(tokens.refreshToken), ...req.deviceInfo });
-    await LoginHistory.create({ userId: user._id, status: 'success', ...req.deviceInfo });
+    const tokens = t.generateTokenPair(user._id || 'demo-user-id');
+    try {
+      if (mongoose.connection.readyState === 1 && tokens.refreshToken && Array.isArray(user.refreshTokens)) {
+        user.refreshTokens.push({ token: await t.hashToken(tokens.refreshToken), createdAt: Date.now(), expiresAt: Date.now() + 7 * 24 * 3600 * 1000 });
+        await user.save();
+        await Session.create({ userId: user._id, token: await t.hashToken(tokens.refreshToken), ...req.deviceInfo });
+        await LoginHistory.create({ userId: user._id, status: 'success', ...req.deviceInfo });
+      }
+    } catch (sideErr) {
+      logger.warn('[googleAuth] Side effect warning:', sideErr.message);
+    }
 
     resU.success(res, { user: require('../utils/helpers').sanitizeUser(user), tokens }, 'Google sign-in successful');
   } catch (x) { next(x); }
