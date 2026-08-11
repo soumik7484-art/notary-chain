@@ -116,7 +116,7 @@ const StatusPill = ({ label, variant = 'green', className = '' }) => {
    BALANCE CARD
    Premium white card with green top-border accent stripe
 ──────────────────────────────────────────────────────────────── */
-const BalanceCard = ({ account, liveBal, syncing, fetchRealBalance, handleConnectWallet }) => {
+export const BalanceCard = ({ account, liveBal, syncing, fetchRealBalance, handleConnectWallet }) => {
   const { user } = useAuth();
   const [hidden, setHidden] = useState(false);
   const [copied, setCopied] = useState(false);

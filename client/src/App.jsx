@@ -29,6 +29,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminAudit from './pages/AdminAudit';
 import AdminAnalytics from './pages/AdminAnalytics';
 import Neobank from './pages/Neobank';
+import Wallet from './pages/Wallet';
 import NotFound from './pages/NotFound';
 import BlockchainHealth from './pages/BlockchainHealth';
 import IdentityVerification from './pages/IdentityVerification';
@@ -119,6 +120,7 @@ function App() {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/verifications" element={<Verifications />} />
               <Route path="/blockchain-health" element={<BlockchainHealth />} />
+              <Route path="/wallet" element={<Wallet />} />
 
               <Route path="/analytics" element={<AdminAnalytics />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />

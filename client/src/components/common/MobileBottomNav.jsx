@@ -7,7 +7,7 @@ const MobileBottomNav = ({ onUploadClick }) => {
     { label: 'Home',     path: '/dashboard',     icon: LayoutDashboard },
     { label: 'Docs',     path: '/documents',     icon: FileText },
     { label: 'Verify',   path: '/verifications',  icon: ShieldCheck },
-    { label: 'Wallet',   path: '/neobank',       icon: Wallet },
+    { label: 'Wallet',   path: '/wallet',        icon: Wallet },
     { label: 'Profile',  path: '/profile',       icon: User },
   ];
 

@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { label: 'History',       path: '/admin/audit',        icon: History,         group: 'records' },
   { label: 'Analytics',     path: '/admin/analytics',    icon: BarChart3,       group: 'records' },
   { label: 'Wallet Health', path: '/blockchain-health',  icon: Activity,        group: 'records' },
-  { label: 'Wallet',        path: '/neobank',            icon: Wallet,          group: 'account' },
+  { label: 'Wallet',        path: '/wallet',             icon: Wallet,          group: 'account' },
   { label: 'Settings',      path: '/settings',           icon: Settings,        group: 'account' },
 ];
 
