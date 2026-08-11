@@ -295,6 +295,9 @@ exports.googleAuthInit = async (req, res, next) => {
       if (mode === 'register' && user) {
         throw new err.ConflictError('Already signed in with this account. Please sign in instead.');
       }
+      if (mode === 'login' && !user) {
+        throw new err.NotFoundError('No account found with this Google account. Please sign up first.');
+      }
       if (!user) {
         user = await User.create({
           email: cleanEmail,
@@ -316,8 +319,12 @@ exports.googleAuthInit = async (req, res, next) => {
         }
       }
     } else {
-      if (mode === 'register' && mongoDbFallbackStore.has(cleanEmail)) {
+      const hasAccount = mongoDbFallbackStore.has(cleanEmail);
+      if (mode === 'register' && hasAccount) {
         throw new err.ConflictError('Already signed in with this account. Please sign in instead.');
+      }
+      if (mode === 'login' && !hasAccount) {
+        throw new err.NotFoundError('No account found with this Google account. Please sign up first.');
       }
       mongoDbFallbackStore.set(cleanEmail, { email: cleanEmail, googleId });
       user = {
@@ -393,7 +400,9 @@ exports.googleVerifyIdentity = async (req, res, next) => {
     }
 
     if (!userRecord && cleanEmail) {
-      // Create user record on-the-fly whenever email is available so verification never fails
+      if (mode === 'login') {
+        throw new err.NotFoundError('No account found with this email. Please sign up first.');
+      }
       if (mongoose.connection.readyState === 1) {
         try {
           userRecord = await User.create({

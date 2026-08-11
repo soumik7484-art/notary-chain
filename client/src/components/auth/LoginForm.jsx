@@ -56,7 +56,13 @@ const LoginForm = () => {
       toast.success('Google account authenticated! Please complete 2-Step Face ID or Passkey verification.');
       navigate('/verify-identity');
     } catch (err) {
-      toast.error(err.message || 'Google sign-in failed.');
+      const msg = err.message || 'Google sign-in failed.';
+      if (msg.includes('No account found') || msg.includes('Please sign up')) {
+        toast.error('No account found with this Google account. Please sign up first.');
+        setTimeout(() => navigate('/signup'), 1200);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setGoogleLoading(false);
     }
