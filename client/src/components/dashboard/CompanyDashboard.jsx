@@ -134,14 +134,6 @@ const CompanyDashboard = () => {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => setUploadOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#2D6A4F] text-white text-[12px] font-semibold hover:bg-[#245741] transition-colors shadow-xs cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Upload Document</span>
-          </button>
-
-          <button
             onClick={fetchDocs}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E9E4DD] bg-white text-[12px] font-medium text-[#55504B] hover:bg-[#F6F3EE] hover:text-[#2D2A27] transition-colors cursor-pointer"
           >
