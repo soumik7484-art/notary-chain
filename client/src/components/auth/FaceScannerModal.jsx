@@ -43,10 +43,19 @@ const FaceScannerModal = ({ isOpen, onClose, mode = 'login', onSuccess }) => {
   const startCamera = useCallback(async () => {
     try {
       setAuthState('CAMERA_STARTING');
-      setStatusMsg('Starting camera...');
+      setStatusMsg('Requesting camera permission...');
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
+
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        setAuthState('FAILED');
+        const unsupportedMsg = 'Camera access is required for Face ID verification. Please allow camera permission in your browser settings and try again.';
+        setStatusMsg(unsupportedMsg);
+        toast.error(unsupportedMsg);
+        return;
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
       });
@@ -62,8 +71,9 @@ const FaceScannerModal = ({ isOpen, onClose, mode = 'login', onSuccess }) => {
     } catch (err) {
       console.error('Camera access error:', err);
       setAuthState('FAILED');
-      setStatusMsg('Camera access denied or unavailable');
-      toast.error('Unable to access camera. Please allow webcam permissions.');
+      const permMsg = 'Camera access is required for Face ID verification. Please allow camera permission in your browser settings and try again.';
+      setStatusMsg(permMsg);
+      toast.error(permMsg);
     }
   }, [mode, stream]);
 

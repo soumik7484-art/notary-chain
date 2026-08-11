@@ -58,7 +58,13 @@ const SignupForm = () => {
       toast.success('Google account created! Please complete 2-Step Face ID or Passkey registration.');
       navigate('/verify-identity');
     } catch (err) {
-      toast.error(err.message || 'Google sign-up failed.');
+      const msg = err.message || 'Google sign-up failed.';
+      if (msg.includes('Already signed in') || msg.includes('already exists') || msg.includes('Please sign in')) {
+        toast.error('Already signed in with this account. Please sign in instead.');
+        setTimeout(() => navigate('/login'), 1200);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setGoogleLoading(false);
     }

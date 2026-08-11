@@ -116,18 +116,27 @@ const IdentityVerification = () => {
     return () => { isMounted = false; };
   }, []);
 
-  // Start Camera
+  // Start Camera with explicit browser permission request
   const startCamera = useCallback(async () => {
     setAuthState('CAMERA_STARTING');
-    setStatusMessage('Accessing webcam camera feed...');
+    setStatusMessage('Requesting camera permission...');
     setVerificationError('');
     setIsLegacyMismatch(false);
+
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setAuthState('FAILED');
+      const unsupportedMsg = 'Camera access is required for Face ID verification. Please allow camera permission in your browser settings and try again.';
+      setVerificationError(unsupportedMsg);
+      toast.error(unsupportedMsg);
+      return;
+    }
 
     try {
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
       }
 
+      // Explicitly request camera permission via browser standard getUserMedia mechanism
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
       });
@@ -142,9 +151,11 @@ const IdentityVerification = () => {
         };
       }
     } catch (err) {
-      console.error('Camera error:', err);
+      console.error('Camera permission error:', err);
       setAuthState('FAILED');
-      setVerificationError('Unable to access webcam. Please check browser permissions and refresh.');
+      const permErrorMsg = 'Camera access is required for Face ID verification. Please allow camera permission in your browser settings and try again.';
+      setVerificationError(permErrorMsg);
+      toast.error(permErrorMsg);
     }
   }, [stream]);
 

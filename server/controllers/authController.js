@@ -291,6 +291,9 @@ exports.googleAuthInit = async (req, res, next) => {
     let user;
     if (mongoose.connection.readyState === 1) {
       user = await User.findOne({ $or: [{ googleId }, { email: cleanEmail }] });
+      if (mode === 'register' && user) {
+        throw new err.ConflictError('Already signed in with this account. Please sign in instead.');
+      }
       if (!user) {
         user = await User.create({
           email: cleanEmail,
