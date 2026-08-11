@@ -278,23 +278,28 @@ const CompanyDashboard = () => {
                   <Activity className="w-4 h-4 text-[#9B9490]" />
                 </div>
                 <div className="space-y-3.5">
-                  {[
-                    { icon: '💸', title: 'P2P Transfer Executed', desc: 'Sent 150 USDC to @ada.polygon', time: '2m ago' },
-                    { icon: '📄', title: 'Document Anchored', desc: 'Q3 Financial Report sealed on Polygon', time: '1h ago' },
-                    { icon: '🔐', title: 'Identity Verified', desc: 'Google OAuth & Face Biometrics', time: '3h ago' },
-                    { icon: '💰', title: 'Cash Top-Up Barcode', desc: 'Generated 7-Eleven deposit code', time: 'Yesterday' },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#FAF8F4] border border-[#E9E4DD] flex items-center justify-center text-[15px] shrink-0">
-                        {item.icon}
+                  {documents.length > 0 ? (
+                    documents.slice(0, 4).map((doc) => (
+                      <div key={doc._id} className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-[#FAF8F4] border border-[#E9E4DD] flex items-center justify-center text-[15px] shrink-0">
+                          📄
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-bold text-[#2D2A27] truncate">{doc.fileName || 'Document'}</p>
+                          <p className="text-[11px] text-[#9B9490] truncate">Status: {doc.status || 'Verified'} · SHA-256 Anchored</p>
+                        </div>
+                        <span className="text-[10px] font-semibold text-[#AAA49F] whitespace-nowrap">
+                          {doc.createdAt ? new Date(doc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-bold text-[#2D2A27] truncate">{item.title}</p>
-                        <p className="text-[11px] text-[#9B9490] truncate">{item.desc}</p>
-                      </div>
-                      <span className="text-[10px] font-semibold text-[#AAA49F] whitespace-nowrap">{item.time}</span>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 py-6 text-center">
+                      <Activity className="w-6 h-6 text-[#D4CECA]" />
+                      <p className="text-[12px] text-[#9B9490]">No real user activity recorded yet</p>
+                      <p className="text-[11px] text-[#AAA49F]">Activities appear here as documents and transactions are created.</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 

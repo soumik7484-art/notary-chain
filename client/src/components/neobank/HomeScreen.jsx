@@ -53,10 +53,10 @@ export default function HomeScreen({ account, onNavigate, liveBal }) {
         </div>
 
         <div className="mt-2 flex items-baseline space-x-1">
-          <span className="text-3xl font-extrabold text-white tracking-tight">
-            ${account?.balance || '0.00'}
+          <span className={`text-3xl font-extrabold tracking-tight ${activeAddr ? 'text-white' : 'text-red-400'}`}>
+            {activeAddr ? `$${account?.balance || '0.00'}` : 'NaN'}
           </span>
-          <span className="text-xs text-slate-400 font-mono">USD</span>
+          {activeAddr && <span className="text-xs text-slate-400 font-mono">USD</span>}
         </div>
 
         {/* Custodial / Web3 Wallet Details */}

@@ -10,9 +10,9 @@ export default function CashInScreen() {
   const [depositData, setDepositData] = useState(null);
 
   const sampleLocations = [
-    { locId: 'loc_771', name: '7-Eleven Store #14092', address: '742 Broadway, NY', dist: '0.2 mi' },
-    { locId: 'loc_882', name: 'CVS Pharmacy #3310', address: '500 Grand St, NY', dist: '0.5 mi' },
-    { locId: 'loc_993', name: 'Walmart MoneyCenter', address: '120 E 14th St, NY', dist: '1.1 mi' }
+    { locId: 'loc_771', name: 'Retail Cash Deposit Location', address: 'Broadway Partner Store, NY', dist: '0.2 mi' },
+    { locId: 'loc_882', name: 'CVS Pharmacy Retail Partner', address: '500 Grand St, NY', dist: '0.5 mi' },
+    { locId: 'loc_993', name: 'Walmart MoneyCenter Partner', address: '120 E 14th St, NY', dist: '1.1 mi' }
   ];
 
   const handleGenerateBarcode = async (e) => {
