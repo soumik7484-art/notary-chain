@@ -437,33 +437,30 @@ exports.googleVerifyIdentity = async (req, res, next) => {
         }
       }
 
-      if (!dbPasskey && !dbPassword) {
-        if (mode === 'register') {
-          const hashedPasskey = await bcrypt.hash(passkey, 12);
-          memoryRecord.passkey = hashedPasskey;
-          memoryRecord.passkeyVerified = true;
-          mongoDbFallbackStore.set(cleanEmail, memoryRecord);
+      // If passkey did not match and either (mode === 'register' OR no dbPasskey exists), enroll the passkey in MongoDB
+      if (!isMatch && (mode === 'register' || !dbPasskey)) {
+        const hashedPasskey = await bcrypt.hash(passkey, 12);
+        memoryRecord.passkey = hashedPasskey;
+        memoryRecord.passkeyVerified = true;
+        mongoDbFallbackStore.set(cleanEmail, memoryRecord);
 
-          userRecord.passkey = hashedPasskey;
-          userRecord.passkeyVerified = true;
-          userRecord.lastVerification = Date.now();
-          if (mongoose.connection.readyState === 1) {
-            try {
-              await User.updateOne(
-                { $or: [{ _id: userRecord._id }, { email: cleanEmail }] },
-                { $set: { passkey: hashedPasskey, passkeyVerified: true, lastVerification: new Date() } }
-              );
-            } catch (e) {}
-          }
-
-          const registeredUser = require('../utils/helpers').sanitizeUser(userRecord);
-          const accessToken = safeSignToken({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, 'notarychain-dev-jwt-secret-key-2024-change-in-production', '7d');
-          const refreshToken = t.generateRefreshToken(userRecord._id || 'demo-user-id');
-          const tokens = { accessToken, refreshToken };
-          return resU.success(res, { user: registeredUser, tokens }, 'Security passkey enrolled in MongoDB successfully!');
-        } else {
-          throw new err.UnauthorizedError('I think you should not have any account, so first create an account.');
+        userRecord.passkey = hashedPasskey;
+        userRecord.passkeyVerified = true;
+        userRecord.lastVerification = Date.now();
+        if (mongoose.connection.readyState === 1) {
+          try {
+            await User.updateOne(
+              { $or: [{ _id: userRecord._id }, { email: cleanEmail }] },
+              { $set: { passkey: hashedPasskey, passkeyVerified: true, lastVerification: new Date() } }
+            );
+          } catch (e) {}
         }
+
+        const registeredUser = require('../utils/helpers').sanitizeUser(userRecord);
+        const accessToken = safeSignToken({ id: (userRecord._id || 'demo-user-id').toString(), faceVerified: true }, 'notarychain-dev-jwt-secret-key-2024-change-in-production', '7d');
+        const refreshToken = t.generateRefreshToken(userRecord._id || 'demo-user-id');
+        const tokens = { accessToken, refreshToken };
+        return resU.success(res, { user: registeredUser, tokens }, 'Security passkey enrolled in MongoDB successfully!');
       }
 
       if (!isMatch) {
