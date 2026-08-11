@@ -220,13 +220,13 @@ const Landing = () => {
                 className="max-w-2xl mx-auto py-2"
               >
                 <div className="text-center mb-8">
-                  <span className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider bg-[#F0FAF5] px-4 py-2 rounded-full border border-[#B3E4CC] shadow-xs">
+                  <span className="text-xs font-bold text-[#2D6A4F] dark:text-[#52B788] uppercase tracking-wider bg-[#F0FAF5] dark:bg-[#2D6A4F]/20 px-4 py-2 rounded-full border border-[#B3E4CC] dark:border-[#2D6A4F] shadow-xs">
                     Select Account Option
                   </span>
-                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#2E2A26] mt-4 mb-2">
+                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#2E2A26] dark:text-white mt-4 mb-2">
                     Welcome to NotaryChain
                   </h2>
-                  <p className="text-sm text-[#7B746E]">
+                  <p className="text-sm text-[#55504B] dark:text-[#A3B8AD]">
                     Choose an option below to sign in to your vault or register a new identity
                   </p>
                 </div>
@@ -238,20 +238,20 @@ const Landing = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                     onClick={() => navigate('/login')}
-                    className="p-7 bg-white border border-[#E8E2DA] rounded-2xl shadow-card hover:shadow-card-hover hover:border-[#2D6A4F] cursor-pointer transition-all group flex flex-col justify-between"
+                    className="p-7 bg-white dark:bg-[#1A231E] border border-[#E8E2DA] dark:border-[#2D4A3E] rounded-2xl shadow-card hover:shadow-card-hover hover:border-[#2D6A4F] dark:hover:border-[#52B788] cursor-pointer transition-all group flex flex-col justify-between"
                   >
                     <div>
-                      <div className="w-14 h-14 rounded-xl bg-[#F0FAF5] border border-[#B3E4CC] text-[#2D6A4F] flex items-center justify-center mb-5 group-hover:bg-[#2D6A4F] group-hover:text-white transition-colors">
+                      <div className="w-14 h-14 rounded-xl bg-[#F0FAF5] dark:bg-[#2D6A4F]/30 border border-[#B3E4CC] dark:border-[#2D6A4F] text-[#2D6A4F] dark:text-[#52B788] flex items-center justify-center mb-5 group-hover:bg-[#2D6A4F] group-hover:text-white transition-colors">
                         <LogIn className="w-7 h-7" />
                       </div>
-                      <h3 className="font-display text-xl font-bold text-[#2E2A26] mb-2">
+                      <h3 className="font-display text-xl font-bold text-[#2E2A26] dark:text-white mb-2">
                         Sign In
                       </h3>
-                      <p className="text-sm text-[#7B746E] leading-relaxed">
+                      <p className="text-sm text-[#55504B] dark:text-[#A3B8AD] leading-relaxed">
                         Access your existing document vault & verification records.
                       </p>
                     </div>
-                    <div className="mt-8 flex items-center justify-between text-sm font-bold text-[#2D6A4F]">
+                    <div className="mt-8 flex items-center justify-between text-sm font-bold text-[#2D6A4F] dark:text-[#52B788]">
                       <span>Log in to account</span>
                       <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </div>
@@ -263,20 +263,20 @@ const Landing = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 }}
                     onClick={() => navigate('/signup')}
-                    className="p-7 bg-white border border-[#2D6A4F] rounded-2xl shadow-card hover:shadow-card-hover bg-gradient-to-b from-white to-[#F0FAF5]/40 cursor-pointer transition-all group flex flex-col justify-between"
+                    className="p-7 bg-white dark:bg-[#1A231E] border-2 border-[#2D6A4F] dark:border-[#52B788] rounded-2xl shadow-card hover:shadow-card-hover bg-gradient-to-b from-white dark:from-[#1A231E] to-[#F0FAF5]/50 dark:to-[#2D6A4F]/20 cursor-pointer transition-all group flex flex-col justify-between"
                   >
                     <div>
                       <div className="w-14 h-14 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center mb-5 shadow-xs">
                         <UserPlus className="w-7 h-7" />
                       </div>
-                      <h3 className="font-display text-xl font-bold text-[#2E2A26] mb-2">
+                      <h3 className="font-display text-xl font-bold text-[#2E2A26] dark:text-white mb-2">
                         Create Account
                       </h3>
-                      <p className="text-sm text-[#7B746E] leading-relaxed">
+                      <p className="text-sm text-[#55504B] dark:text-[#A3B8AD] leading-relaxed font-normal">
                         Register a new Company, Bank, or Certified Notary profile.
                       </p>
                     </div>
-                    <div className="mt-8 flex items-center justify-between text-sm font-bold text-[#2D6A4F]">
+                    <div className="mt-8 flex items-center justify-between text-sm font-bold text-[#2D6A4F] dark:text-[#52B788]">
                       <span>Start registration</span>
                       <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </div>
