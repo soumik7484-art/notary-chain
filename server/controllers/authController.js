@@ -254,7 +254,7 @@ exports.revokeSession = async (req, res, next) => {
  */
 exports.googleAuthInit = async (req, res, next) => {
   try {
-    const { idToken, mode = 'login' } = req.body;
+    const { idToken, mode = 'login', email: clientEmail, name: clientName, picture: clientPicture } = req.body;
     if (!idToken) throw new err.BadRequestError('idToken is required');
 
     let decoded;
@@ -267,16 +267,16 @@ exports.googleAuthInit = async (req, res, next) => {
       if (payloadDecoded && (payloadDecoded.email || payloadDecoded.sub || payloadDecoded.user_id)) {
         decoded = {
           uid: payloadDecoded.user_id || payloadDecoded.sub || payloadDecoded.uid || `google-${Date.now()}`,
-          email: payloadDecoded.email || 'user@notarychain.com',
-          name: payloadDecoded.name || payloadDecoded.displayName || (payloadDecoded.email ? payloadDecoded.email.split('@')[0] : 'Google User'),
-          picture: payloadDecoded.picture || payloadDecoded.photoURL || ''
+          email: payloadDecoded.email || clientEmail || 'user@notarychain.com',
+          name: payloadDecoded.name || payloadDecoded.displayName || clientName || 'Google User',
+          picture: payloadDecoded.picture || payloadDecoded.photoURL || clientPicture || ''
         };
-      } else if (idToken === 'demo-google-id-token') {
+      } else if (idToken === 'demo-google-id-token' || clientEmail) {
         decoded = {
-          uid: 'google-demo-uid-789',
-          email: 'soumik7484@gmail.com',
-          name: 'Soumik Chatterjee',
-          picture: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+          uid: `google-${clientEmail ? clientEmail.replace(/[^a-zA-Z0-9]/g, '') : 'demo-uid'}`,
+          email: clientEmail || 'soumik7484@gmail.com',
+          name: clientName || (clientEmail ? clientEmail.split('@')[0] : 'Google User'),
+          picture: clientPicture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
         };
       } else {
         throw new err.UnauthorizedError('Invalid or expired Firebase token');

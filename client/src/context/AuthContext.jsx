@@ -85,7 +85,13 @@ export const AuthProvider = ({ children }) => {
 
     let payload = null;
     try {
-      const res = await axiosInstance.post('/auth/google/init', { idToken, mode });
+      const res = await axiosInstance.post('/auth/google/init', {
+        idToken,
+        mode,
+        email: firebaseUser.email,
+        name: fullName,
+        picture: photo
+      });
       payload = extract(res);
     } catch (backendErr) {
       console.warn('[Google OAuth Backend Init Error]:', backendErr);
