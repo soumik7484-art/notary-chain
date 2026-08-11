@@ -23,12 +23,14 @@ const LoginForm = () => {
   const [loading, setLoading]     = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
   const { login, loginWithGoogle, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setAuthError('');
     try {
       const res = await login(email, password);
       sessionStorage.setItem('pending_google_auth', JSON.stringify({
@@ -40,13 +42,14 @@ const LoginForm = () => {
       navigate('/verify-identity');
     } catch (err) {
       const msg = err.message || 'Login failed';
-      if (msg.includes('No account found') || msg.includes('user-not-found') || msg.includes('create an account first')) {
-        toast.error('No account found with this email. Please create an account first.', { duration: 5000 });
+      let popupMsg = msg;
+      if (msg.includes('No account found') || msg.includes('user-not-found') || msg.includes('create an account first') || msg.includes('does not exist')) {
+        popupMsg = 'No account found with this email. Please create an account first.';
       } else if (msg.includes('password') || msg.includes('credentials') || msg.includes('Unauthorized')) {
-        toast.error('wrong password', { duration: 5000 });
-      } else {
-        toast.error(msg, { duration: 5000 });
+        popupMsg = 'wrong password';
       }
+      setAuthError(popupMsg);
+      toast.error(popupMsg, { duration: 5000 });
     } finally {
       setLoading(false);
     }
@@ -54,6 +57,7 @@ const LoginForm = () => {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
+    setAuthError('');
     try {
       const res = await loginWithGoogle('login');
       if (res?.redirecting) {
@@ -64,11 +68,12 @@ const LoginForm = () => {
       navigate('/verify-identity');
     } catch (err) {
       const msg = err.message || 'Google sign-in failed.';
-      if (msg.includes('No account found') || msg.includes('user-not-found') || msg.includes('create an account first') || msg.includes('Please sign up')) {
-        toast.error('No account found with this Google account. Please create an account first.', { duration: 5000 });
-      } else {
-        toast.error(msg, { duration: 5000 });
+      let popupMsg = msg;
+      if (msg.includes('No account found') || msg.includes('user-not-found') || msg.includes('create an account first') || msg.includes('Please sign up') || msg.includes('does not exist')) {
+        popupMsg = 'No account found with this Google account. Please create an account first.';
       }
+      setAuthError(popupMsg);
+      toast.error(popupMsg, { duration: 5000 });
     } finally {
       setGoogleLoading(false);
     }
@@ -195,6 +200,13 @@ const LoginForm = () => {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
+        {authError && (
+          <div className="p-3.5 rounded-xl bg-[#FEE2E2] border border-[#FCA5A5] text-[#DC2626] text-xs font-semibold text-center flex items-center justify-between shadow-xs">
+            <span>{authError}</span>
+            <Link to="/signup" className="underline font-bold hover:text-[#B91C1C] shrink-0 ml-2">Create Account</Link>
+          </div>
+        )}
+
         <Input
           label="Email Address"
           icon={<Mail className="w-4 h-4" />}
