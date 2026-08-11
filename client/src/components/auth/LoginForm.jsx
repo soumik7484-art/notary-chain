@@ -39,7 +39,13 @@ const LoginForm = () => {
       toast.success('Credentials verified! Complete 2-Step Face ID or Passkey verification.');
       navigate('/verify-identity');
     } catch (err) {
-      toast.error(err.message || 'Login failed');
+      const msg = err.message || 'Login failed';
+      if (msg.includes('No account found') || msg.includes('user-not-found') || msg.includes('create an account first')) {
+        toast.error('No account found with this email. Please create an account first.');
+        setTimeout(() => navigate('/signup'), 1500);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -57,9 +63,9 @@ const LoginForm = () => {
       navigate('/verify-identity');
     } catch (err) {
       const msg = err.message || 'Google sign-in failed.';
-      if (msg.includes('No account found') || msg.includes('Please sign up')) {
-        toast.error('No account found with this Google account. Please sign up first.');
-        setTimeout(() => navigate('/signup'), 1200);
+      if (msg.includes('No account found') || msg.includes('user-not-found') || msg.includes('create an account first') || msg.includes('Please sign up')) {
+        toast.error('No account found with this Google account. Please create an account first.');
+        setTimeout(() => navigate('/signup'), 1500);
       } else {
         toast.error(msg);
       }

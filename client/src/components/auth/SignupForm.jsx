@@ -30,8 +30,8 @@ const SignupForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isEmailRegisteredLocally(formData.email)) {
-      toast.error('Already signed in with this account. Please sign in instead.');
-      setTimeout(() => navigate('/login'), 1200);
+      toast.error('An account with this email already exists. Please log in instead.');
+      setTimeout(() => navigate('/login'), 1500);
       return;
     }
     if (formData.password !== formData.confirm) return toast.error('Passwords do not match');
@@ -47,9 +47,9 @@ const SignupForm = () => {
       navigate('/verify-identity');
     } catch (err) {
       const msg = err.message || 'Signup failed';
-      if (msg.includes('Already signed in') || msg.includes('already exists') || msg.includes('Please sign in')) {
-        toast.error('Already signed in with this account. Please sign in instead.');
-        setTimeout(() => navigate('/login'), 1200);
+      if (msg.includes('already exists') || msg.includes('Already signed in') || msg.includes('email-already-in-use') || msg.includes('Please sign in') || msg.includes('Please log in')) {
+        toast.error('An account with this email already exists. Please log in instead.');
+        setTimeout(() => navigate('/login'), 1500);
       } else {
         toast.error(msg);
       }
@@ -70,9 +70,9 @@ const SignupForm = () => {
       navigate('/verify-identity');
     } catch (err) {
       const msg = err.message || 'Google sign-up failed.';
-      if (msg.includes('Already signed in') || msg.includes('already exists') || msg.includes('Please sign in')) {
-        toast.error('Already signed in with this account. Please sign in instead.');
-        setTimeout(() => navigate('/login'), 1200);
+      if (msg.includes('already exists') || msg.includes('Already signed in') || msg.includes('email-already-in-use') || msg.includes('Please sign in') || msg.includes('Please log in')) {
+        toast.error('An account with this email already exists. Please log in instead.');
+        setTimeout(() => navigate('/login'), 1500);
       } else {
         toast.error(msg);
       }

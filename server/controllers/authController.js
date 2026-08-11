@@ -57,7 +57,7 @@ exports.signup = async (req, res, next) => {
 
     const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
-      throw new err.ConflictError('Already signed in with this account. Please sign in instead.');
+      throw new err.ConflictError('An account with this email already exists. Please log in instead.');
     }
 
     const u = new User({
@@ -132,11 +132,12 @@ exports.login = async (req, res, next) => {
 
     const cleanEmail = email.toLowerCase().trim();
     const u = await User.findOne({ email: cleanEmail });
-    if (!u || !(await u.comparePassword(password))) {
-      if (u) {
-        try { await LoginHistory.create({ userId: u._id, status: 'failure', ...(req.deviceInfo || {}) }); } catch (e) {}
-      }
-      throw new err.UnauthorizedError('Invalid email or password');
+    if (!u) {
+      throw new err.NotFoundError('No account found with this email. Please create an account first.');
+    }
+    if (!(await u.comparePassword(password))) {
+      try { await LoginHistory.create({ userId: u._id, status: 'failure', ...(req.deviceInfo || {}) }); } catch (e) {}
+      throw new err.UnauthorizedError('Invalid password. Please check your credentials and try again.');
     }
     
     const tokens = t.generateTokenPair(u._id);
@@ -293,10 +294,10 @@ exports.googleAuthInit = async (req, res, next) => {
       const query = googleId ? { $or: [{ googleId }, { email: cleanEmail }] } : { email: cleanEmail };
       user = await User.findOne(query);
       if (mode === 'register' && user) {
-        throw new err.ConflictError('Already signed in with this account. Please sign in instead.');
+        throw new err.ConflictError('An account with this email already exists. Please log in instead.');
       }
       if (mode === 'login' && !user) {
-        throw new err.NotFoundError('No account found with this Google account. Please sign up first.');
+        throw new err.NotFoundError('No account found with this email. Please create an account first.');
       }
       if (!user) {
         user = await User.create({

@@ -259,15 +259,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('face_verified');
       setNeedsVerification(true);
       return payload;
-    } catch {
-      localStorage.setItem('accessToken', 'demo-token');
-      const role = email?.startsWith('admin') ? 'admin' : email?.startsWith('notary') ? 'notary' : 'company';
-      const demoAccount = { ...DEMO_USER, email, role };
-      setUser(demoAccount);
-      localStorage.setItem('user_session', JSON.stringify(demoAccount));
-      localStorage.removeItem('face_verified');
-      setNeedsVerification(true);
-      return { user: demoAccount };
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || 'Login failed';
+      throw new Error(errorMsg);
     }
   }, []);
 
@@ -297,14 +291,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('face_verified');
       setNeedsVerification(true);
       return payload;
-    } catch {
-      localStorage.setItem('accessToken', 'demo-token');
-      const newUser = { ...DEMO_USER, ...formData, name: `${formData.firstName} ${formData.lastName}` };
-      setUser(newUser);
-      localStorage.setItem('user_session', JSON.stringify(newUser));
-      localStorage.removeItem('face_verified');
-      setNeedsVerification(true);
-      return { user: newUser };
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || 'Signup failed';
+      throw new Error(errorMsg);
     }
   }, []);
 
