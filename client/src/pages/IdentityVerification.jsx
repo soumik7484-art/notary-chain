@@ -82,16 +82,8 @@ const IdentityVerification = () => {
     }
 
     if (!parsedUser) {
-      const fallbackUser = {
-        _id: 'demo-google-user-123',
-        name: 'Verified Identity User',
-        email: 'user@notarychain.com',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        role: 'company'
-      };
-      setPendingUser(fallbackUser);
-      setTempToken('demo-temp-token');
-      setMode('login');
+      toast.error('I think you do not have an account, so first create an account.');
+      setTimeout(() => navigate('/signup'), 1500);
     }
   }, []);
 
@@ -331,13 +323,11 @@ const IdentityVerification = () => {
       setTimeout(() => navigate('/dashboard'), 800);
     } catch (err) {
       console.error('Face verification failed:', err);
-      const msg = err.response?.data?.message || err.message || 'Face Not Recognized. Access Denied.';
+      const popupMsg = 'I think you should not have any account, so first create an account.';
       setAuthState('FAILED');
-      setVerificationError(msg);
-      toast.error(msg);
-      if (msg.includes('No registered account') || msg.includes('create an account first') || msg.includes('No account found')) {
-        setTimeout(() => navigate('/signup'), 1800);
-      }
+      setVerificationError(popupMsg);
+      toast.error(popupMsg, { duration: 5000 });
+      setTimeout(() => navigate('/signup'), 1800);
     } finally {
       isVerifyingLockRef.current = false;
       setEnrollmentProgress(0);
@@ -396,11 +386,10 @@ const IdentityVerification = () => {
       setTimeout(() => navigate('/dashboard'), 800);
     } catch (err) {
       const msg = err.response?.data?.message || 'Passkey verification failed.';
-      setVerificationError(msg);
-      toast.error(msg);
-      if (msg.includes('No registered account') || msg.includes('create an account first') || msg.includes('No account found')) {
-        setTimeout(() => navigate('/signup'), 1800);
-      }
+      const popupMsg = 'I think you should not have any account, so first create an account.';
+      setVerificationError(popupMsg);
+      toast.error(popupMsg, { duration: 5000 });
+      setTimeout(() => navigate('/signup'), 1800);
     } finally {
       setPasswordVerifying(false);
     }
