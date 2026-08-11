@@ -90,7 +90,21 @@ const Landing = () => {
   const [showAuthCards, setShowAuthCards] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#FAF8F4] text-[#2E2A26] font-sans flex flex-col justify-between overflow-x-hidden select-none transition-colors">
+    <div className="min-h-screen bg-[#FAF8F4] text-[#2E2A26] font-sans flex flex-col justify-between overflow-x-hidden select-none transition-colors relative">
+
+      {/* ── Technical Blueprint Grid Overlay (Landing Page Only) ── */}
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(45, 106, 79, 0.07) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(45, 106, 79, 0.07) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+          maskImage: 'radial-gradient(ellipse 80% 80% at 50% 40%, black 30%, transparent 90%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 40%, black 30%, transparent 90%)'
+        }}
+      />
 
       {/* ── Sticky Full-Width Navbar ────────────────────────── */}
       <nav className="fixed top-0 w-full z-50 bg-[#FAF8F4]/95 backdrop-blur-sm border-b border-[#E8E2DA] transition-colors">
