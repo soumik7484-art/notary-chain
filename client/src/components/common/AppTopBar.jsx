@@ -10,10 +10,11 @@ const AppTopBar = ({ onMobileMenuToggle }) => {
   const { theme, toggleTheme, isDark } = useTheme();
   const [walletCopied, setWalletCopied] = useState(false);
 
-  const walletAddress = user?.walletAddress || '0x71C7…8976F';
-  const shortWallet = walletAddress.length > 12
+  const rawWallet = user?.walletAddress || localStorage.getItem('web3_connected_wallet') || '';
+  const walletAddress = /^0x[a-fA-F0-9]{40}$/.test(rawWallet.trim()) ? rawWallet.trim() : '';
+  const shortWallet = walletAddress
     ? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-5)}`
-    : walletAddress;
+    : 'Not Connected';
 
   const handleCopyWallet = () => {
     navigator.clipboard.writeText(walletAddress).catch(() => {});

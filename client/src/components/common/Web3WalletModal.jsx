@@ -5,18 +5,18 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 
 export const getLivePolygonBalance = async (address) => {
-  if (!address || !address.startsWith('0x')) return { balancePol: '0.0000', balanceUsdc: '0.00' };
+  if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address.trim())) return { balancePol: '0.0000', balanceUsdc: '0.00' };
 
   try {
     if (window.ethereum) {
       const hexBal = await window.ethereum.request({
         method: 'eth_getBalance',
-        params: [address, 'latest']
+        params: [address.trim(), 'latest']
       });
       const wei = BigInt(hexBal);
       const pol = Number(wei) / 1e18;
       const formattedPol = pol.toFixed(4);
-      const formattedUsdc = (pol > 0 ? pol * 0.42 : 1250.0).toFixed(2);
+      const formattedUsdc = (pol * 0.42).toFixed(2);
       return { balancePol: formattedPol, balanceUsdc: formattedUsdc };
     }
   } catch (e) {}
@@ -28,7 +28,7 @@ export const getLivePolygonBalance = async (address) => {
       body: JSON.stringify({
         jsonrpc: '2.0',
         method: 'eth_getBalance',
-        params: [address, 'latest'],
+        params: [address.trim(), 'latest'],
         id: 1
       })
     });
@@ -40,7 +40,7 @@ export const getLivePolygonBalance = async (address) => {
     }
   } catch (e) {}
 
-  return { balancePol: '14.8500', balanceUsdc: '1,250.00' };
+  return { balancePol: '0.0000', balanceUsdc: '0.00' };
 };
 
 const Web3WalletModal = ({ isOpen, onClose, onSaveSuccess }) => {
