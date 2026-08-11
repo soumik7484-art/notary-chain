@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, CreditCard, QrCode, Building2, ArrowUpRight,
   ArrowDownLeft, History, ShieldCheck, Zap, CheckCircle2,
@@ -721,12 +721,21 @@ const CoinMascot = () => (
 ──────────────────────────────────────────────────────────────── */
 export default function Neobank() {
   const navigate  = useNavigate();
+  const location  = useLocation();
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('home');
   const [account,   setAccount]   = useState(null);
   const [loading,   setLoading]   = useState(true);
   const [liveBal,   setLiveBal]   = useState(null);
   const [syncing,   setSyncing]   = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const action = params.get('action') || params.get('tab');
+    if (action && ['home', 'cash-in', 'send', 'deposit', 'withdraw', 'analytics', 'history', 'kyc'].includes(action)) {
+      setActiveTab(action);
+    }
+  }, [location]);
 
   const addr = user?.walletAddress || localStorage.getItem('web3_connected_wallet') || account?.walletAddress || '';
 

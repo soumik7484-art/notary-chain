@@ -54,7 +54,7 @@ export default function HomeScreen({ account, onNavigate, liveBal }) {
 
         <div className="mt-2 flex items-baseline space-x-1">
           <span className="text-3xl font-extrabold text-white tracking-tight">
-            ${activeAddr ? '0.00' : (account?.balance || '2,450.00')}
+            ${account?.balance || '0.00'}
           </span>
           <span className="text-xs text-slate-400 font-mono">USD</span>
         </div>

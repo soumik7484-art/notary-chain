@@ -28,21 +28,23 @@ export default function InteractiveNeobankPhone({ className = '' }) {
     fetchAccount();
   }, []);
 
-  const handleOpenNeobank = (e) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    navigate('/neobank');
+  const handleOpenNeobank = (actionOrEvent) => {
+    let action = 'home';
+    if (typeof actionOrEvent === 'string') {
+      action = actionOrEvent;
+    }
+    navigate(`/neobank${action && action !== 'home' ? `?action=${action}` : ''}`);
   };
 
   return (
     <div
-      onClick={handleOpenNeobank}
+      onClick={() => handleOpenNeobank('home')}
       className={`relative cursor-pointer group transition-transform hover:scale-[1.01] active:scale-[0.99] ${className}`}
       title="Click to open Polygon Neobank"
     >
-      <IPhoneFrame activeTab="home" onTabChange={handleOpenNeobank}>
+      <IPhoneFrame activeTab="home" onTabChange={(tab) => handleOpenNeobank(tab)}>
         <div className="flex-1 min-h-[500px]">
-          <HomeScreen account={account} onNavigate={handleOpenNeobank} />
+          <HomeScreen account={account} onNavigate={(screen) => handleOpenNeobank(screen)} />
         </div>
       </IPhoneFrame>
     </div>
