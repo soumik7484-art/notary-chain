@@ -323,11 +323,13 @@ const IdentityVerification = () => {
       setTimeout(() => navigate('/dashboard'), 800);
     } catch (err) {
       console.error('Face verification failed:', err);
-      const popupMsg = 'I think you should not have any account, so first create an account.';
+      const msg = err.response?.data?.message || err.message || '';
+      const popupMsg = msg.includes('No registered account') || msg.includes('create an account first')
+        ? 'I think you should not have any account, so first create an account.'
+        : 'Your face not matched.';
       setAuthState('FAILED');
       setVerificationError(popupMsg);
       toast.error(popupMsg, { duration: 5000 });
-      setTimeout(() => navigate('/signup'), 1800);
     } finally {
       isVerifyingLockRef.current = false;
       setEnrollmentProgress(0);
@@ -386,10 +388,9 @@ const IdentityVerification = () => {
       setTimeout(() => navigate('/dashboard'), 800);
     } catch (err) {
       const msg = err.response?.data?.message || 'Passkey verification failed.';
-      const popupMsg = 'I think you should not have any account, so first create an account.';
+      const popupMsg = msg.includes('Passkey') || msg.includes('account') ? msg : 'I think you should not have any account, so first create an account.';
       setVerificationError(popupMsg);
       toast.error(popupMsg, { duration: 5000 });
-      setTimeout(() => navigate('/signup'), 1800);
     } finally {
       setPasswordVerifying(false);
     }
