@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../api/axios';
 import { auth, googleProvider, IS_CONFIGURED } from '../config/firebase';
-import { signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'firebase/auth';
 
 export const AuthContext = createContext();
 
@@ -306,11 +306,24 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
-    try { await axiosInstance.post('/auth/logout'); } catch {}
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user_session');
-    localStorage.removeItem('face_verified');
+    if (IS_CONFIGURED && auth) {
+      try { await signOut(auth); } catch (e) {}
+    }
+    localStorage.clear();
+    sessionStorage.clear();
+    setUser(null);
+    setNeedsVerification(false);
+  }, []);
+
+  const resetSystemAuth = useCallback(async () => {
+    try {
+      await axiosInstance.post('/auth/reset-auth-db');
+    } catch (e) {}
+    if (IS_CONFIGURED && auth) {
+      try { await signOut(auth); } catch (e) {}
+    }
+    localStorage.clear();
+    sessionStorage.clear();
     setUser(null);
     setNeedsVerification(false);
   }, []);
@@ -380,7 +393,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated, needsVerification, completeVerification, login, signup, logout, refreshToken, updateUser, loginWithGoogle }}>
+    <AuthContext.Provider value={{ user, isLoading, isAuthenticated, needsVerification, completeVerification, login, signup, logout, refreshToken, updateUser, loginWithGoogle, resetSystemAuth }}>
       {children}
     </AuthContext.Provider>
   );

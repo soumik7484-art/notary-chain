@@ -686,3 +686,17 @@ exports.googleAuth = async (req, res, next) => {
     resU.success(res, { user: require('../utils/helpers').sanitizeUser(user), tokens }, 'Google sign-in successful');
   } catch (x) { next(x); }
 };
+
+exports.resetAuthDb = async (req, res, next) => {
+  try {
+    mongoDbFallbackStore.clear();
+    if (mongoose.connection.readyState === 1) {
+      await User.deleteMany({});
+      await Session.deleteMany({});
+      await LoginHistory.deleteMany({});
+    }
+    return resU.success(res, null, 'Authentication database and memory cache successfully reset to zero accounts.');
+  } catch (x) {
+    next(x);
+  }
+};
