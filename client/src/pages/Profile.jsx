@@ -340,7 +340,9 @@ const Profile = () => {
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-[#E8E2DA] flex items-center justify-between gap-2">
                   <code className="text-xs font-mono font-bold text-[#2E2A26] truncate">
-                    {user?.walletAddress || localStorage.getItem('web3_connected_wallet') || 'Not connected yet'}
+                    {(window.ethereum && window.ethereum.selectedAddress)
+                      ? window.ethereum.selectedAddress
+                      : (localStorage.getItem('web3_connected_wallet') || user?.walletAddress || 'Not connected yet')}
                   </code>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#2D6A4F] text-white shrink-0">
                     Polygon Amoy

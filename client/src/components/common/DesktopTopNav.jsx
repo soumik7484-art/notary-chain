@@ -67,13 +67,23 @@ const DesktopTopNav = () => {
         {/* Right: Wallet, Theme Toggle, Notifications, Profile & Logout */}
         <div className="flex items-center gap-3 shrink-0">
           {/* Wallet pill */}
-          <Link
-            to="/neobank"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#F0FAF5] border border-[#B3E4CC] text-[#2D6A4F] hover:bg-[#D9F2E6] transition-all text-xs font-semibold shadow-xs"
-          >
-            <Wallet className="w-3.5 h-3.5" />
-            <span>0x71C7...8976F</span>
-          </Link>
+          {(() => {
+            const activeWallet = (window.ethereum && window.ethereum.selectedAddress)
+              ? window.ethereum.selectedAddress
+              : localStorage.getItem('web3_connected_wallet') || user?.walletAddress || '';
+            const walletDisplay = activeWallet
+              ? `${activeWallet.slice(0, 6)}...${activeWallet.slice(-4)}`
+              : 'Connect Web3';
+            return (
+              <Link
+                to="/neobank"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#F0FAF5] border border-[#B3E4CC] text-[#2D6A4F] hover:bg-[#D9F2E6] transition-all text-xs font-semibold shadow-xs"
+              >
+                <Wallet className="w-3.5 h-3.5" />
+                <span className="font-mono">{walletDisplay}</span>
+              </Link>
+            );
+          })()}
 
           {/* Theme Toggle Button */}
           <button

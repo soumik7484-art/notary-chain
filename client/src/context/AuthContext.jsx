@@ -192,6 +192,49 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribeFirebase();
   }, [completeGoogleAuth]);
 
+  // Global Web3 Wallet Real-time Sync Effect
+  useEffect(() => {
+    if (window.ethereum) {
+      const syncMetaMask = () => {
+        const activeAddr = window.ethereum.selectedAddress;
+        if (activeAddr) {
+          localStorage.setItem('web3_connected_wallet', activeAddr);
+          setUser((prev) => {
+            if (!prev) return prev;
+            if (prev.walletAddress !== activeAddr) {
+              const updated = { ...prev, walletAddress: activeAddr, isWeb3User: true };
+              localStorage.setItem('user_session', JSON.stringify(updated));
+              return updated;
+            }
+            return prev;
+          });
+        }
+      };
+
+      syncMetaMask();
+
+      const handleAccountsChanged = (accounts) => {
+        if (accounts && accounts.length > 0) {
+          const newWallet = accounts[0];
+          localStorage.setItem('web3_connected_wallet', newWallet);
+          setUser((prev) => {
+            if (!prev) return prev;
+            const updated = { ...prev, walletAddress: newWallet, isWeb3User: true };
+            localStorage.setItem('user_session', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      return () => {
+        if (window.ethereum.removeListener) {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        }
+      };
+    }
+  }, []);
+
   const login = useCallback(async (email, password) => {
     try {
       const res = await axiosInstance.post('/auth/login', { email, password });
