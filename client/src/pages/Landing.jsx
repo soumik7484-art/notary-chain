@@ -148,85 +148,93 @@ const Landing = () => {
 
         <div className="relative max-w-4xl mx-auto text-center w-full">
 
-          {/* Hero Content Container */}
-          <motion.div
-            animate={showAuthCards ? { y: -30, opacity: 0.3 } : { y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {/* 1. ANIMATED COIN */}
-            <AnimatedGoldCoin />
-
-            {/* Trust badge */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#2D6A4F] bg-[#F0FAF5] border border-[#B3E4CC] px-5 py-2 rounded-full mb-6 shadow-xs"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Polygon Blockchain Anchored · AI Verified · Legally Binding
-            </motion.div>
-
-            {/* 2. PRODUCT TITLE (Increased Font Size) */}
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.05 }}
-              className="font-display text-5xl sm:text-6xl md:text-7xl font-800 text-[#2E2A26] leading-[1.1] tracking-tight mb-6"
-            >
-              Secure Digital <span className="text-[#2D6A4F]">Document Verification</span>
-            </motion.h1>
-
-            {/* 3. SHORT DESCRIPTION (Increased Font Size) */}
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-lg sm:text-xl text-[#55504B] leading-relaxed mb-10 max-w-2xl mx-auto font-normal"
-            >
-              NotaryChain combines AI-powered OCR document analysis, biometric identity checks, and immutable Polygon smart contract anchoring for enterprise teams.
-            </motion.p>
-
-            {/* 4. GET STARTED BUTTON */}
-            {!showAuthCards && (
+          {/* Hero Content / Account Options AnimatePresence */}
+          <AnimatePresence mode="wait">
+            {!showAuthCards ? (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                key="hero-main"
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.15 }}
-                className="flex justify-center"
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               >
-                <button
-                  id="landing-get-started-btn"
-                  onClick={() => setShowAuthCards(true)}
-                  className="inline-flex items-center justify-center gap-3 bg-[#2D6A4F] text-white font-bold px-10 py-4.5 rounded-xl hover:bg-[#245741] transition-all shadow-card hover:shadow-card-hover text-base font-display"
+                {/* 1. ANIMATED COIN */}
+                <AnimatedGoldCoin />
+
+                {/* Trust badge */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#2D6A4F] bg-[#F0FAF5] border border-[#B3E4CC] px-5 py-2 rounded-full mb-6 shadow-xs"
                 >
-                  Get Started
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </motion.div>
-            )}
-          </motion.div>
+                  <ShieldCheck className="w-4 h-4" />
+                  Polygon Blockchain Anchored · AI Verified · Legally Binding
+                </motion.div>
 
-          {/* 5. INTERACTIVE CARDS REVEAL (Card 1: Sign In, Card 2: Create Account) */}
-          <AnimatePresence>
-            {showAuthCards && (
+                {/* 2. PRODUCT TITLE */}
+                <motion.h1
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.05 }}
+                  className="font-display text-5xl sm:text-6xl md:text-7xl font-800 text-[#2E2A26] leading-[1.1] tracking-tight mb-6"
+                >
+                  Secure Digital <span className="text-[#2D6A4F]">Document Verification</span>
+                </motion.h1>
+
+                {/* 3. SHORT DESCRIPTION */}
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="text-lg sm:text-xl text-[#55504B] leading-relaxed mb-10 max-w-2xl mx-auto font-normal"
+                >
+                  NotaryChain combines AI-powered OCR document analysis, biometric identity checks, and immutable Polygon smart contract anchoring for enterprise teams.
+                </motion.p>
+
+                {/* 4. GET STARTED BUTTON */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.15 }}
+                  className="flex justify-center"
+                >
+                  <button
+                    id="landing-get-started-btn"
+                    onClick={() => setShowAuthCards(true)}
+                    className="inline-flex items-center justify-center gap-3 bg-[#2D6A4F] text-white font-bold px-10 py-4.5 rounded-xl hover:bg-[#245741] transition-all shadow-card hover:shadow-card-hover text-base font-display"
+                  >
+                    Get Started
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </motion.div>
+              </motion.div>
+            ) : (
+              /* INTERACTIVE CARDS REVEAL (Card 1: Sign In, Card 2: Create Account) */
               <motion.div
-                initial={{ opacity: 0, y: 50 }}
+                key="hero-auth-cards"
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 30 }}
-                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                className="max-w-2xl mx-auto -mt-8"
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="max-w-2xl mx-auto py-2"
               >
-                <div className="text-center mb-6">
-                  <span className="text-sm font-bold text-[#2D6A4F] uppercase tracking-wider bg-[#F0FAF5] px-4 py-1.5 rounded-full border border-[#B3E4CC]">
+                <div className="text-center mb-8">
+                  <span className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider bg-[#F0FAF5] px-4 py-2 rounded-full border border-[#B3E4CC] shadow-xs">
                     Select Account Option
                   </span>
+                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#2E2A26] mt-4 mb-2">
+                    Welcome to NotaryChain
+                  </h2>
+                  <p className="text-sm text-[#7B746E]">
+                    Choose an option below to sign in to your vault or register a new identity
+                  </p>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-5 text-left">
                   {/* CARD 1: SIGN IN */}
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                     onClick={() => navigate('/login')}
@@ -251,9 +259,9 @@ const Landing = () => {
 
                   {/* CARD 2: CREATE ACCOUNT */}
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
+                    transition={{ delay: 0.15 }}
                     onClick={() => navigate('/signup')}
                     className="p-7 bg-white border border-[#2D6A4F] rounded-2xl shadow-card hover:shadow-card-hover bg-gradient-to-b from-white to-[#F0FAF5]/40 cursor-pointer transition-all group flex flex-col justify-between"
                   >
@@ -275,10 +283,10 @@ const Landing = () => {
                   </motion.div>
                 </div>
 
-                <div className="mt-6">
+                <div className="mt-8">
                   <button
                     onClick={() => setShowAuthCards(false)}
-                    className="text-sm text-[#7B746E] hover:text-[#2E2A26] underline font-medium"
+                    className="text-sm text-[#7B746E] hover:text-[#2D6A4F] underline font-medium transition-colors"
                   >
                     ← Back to introduction
                   </button>
