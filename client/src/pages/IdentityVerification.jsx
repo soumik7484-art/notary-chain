@@ -335,6 +335,9 @@ const IdentityVerification = () => {
       setAuthState('FAILED');
       setVerificationError(msg);
       toast.error(msg);
+      if (msg.includes('No registered account') || msg.includes('create an account first') || msg.includes('No account found')) {
+        setTimeout(() => navigate('/signup'), 1800);
+      }
     } finally {
       isVerifyingLockRef.current = false;
       setEnrollmentProgress(0);
@@ -395,6 +398,9 @@ const IdentityVerification = () => {
       const msg = err.response?.data?.message || 'Passkey verification failed.';
       setVerificationError(msg);
       toast.error(msg);
+      if (msg.includes('No registered account') || msg.includes('create an account first') || msg.includes('No account found')) {
+        setTimeout(() => navigate('/signup'), 1800);
+      }
     } finally {
       setPasswordVerifying(false);
     }

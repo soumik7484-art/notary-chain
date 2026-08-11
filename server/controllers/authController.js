@@ -401,43 +401,14 @@ exports.googleVerifyIdentity = async (req, res, next) => {
     }
 
     if (!userRecord && cleanEmail) {
-      if (mode === 'login') {
-        throw new err.NotFoundError('No account found with this email. Please sign up first.');
-      }
-      if (mongoose.connection.readyState === 1) {
-        try {
-          userRecord = await User.create({
-            email: cleanEmail,
-            firstName: cleanEmail.split('@')[0],
-            lastName: 'User',
-            role: 'company',
-            isEmailVerified: true
-          });
-        } catch (createErr) {
-          logger.warn('[googleVerifyIdentity] User.create failed, using memory fallback:', createErr.message);
-        }
-      }
-      if (!userRecord) {
-        userRecord = {
-          _id: new mongoose.Types.ObjectId(),
-          email: cleanEmail,
-          firstName: cleanEmail.split('@')[0],
-          lastName: 'User',
-          role: 'company',
-          isEmailVerified: true
-        };
+      const memoryFallback = mongoDbFallbackStore.get(cleanEmail);
+      if (memoryFallback?._id) {
+        userRecord = memoryFallback;
       }
     }
 
     if (!userRecord) {
-      userRecord = {
-        _id: new mongoose.Types.ObjectId(),
-        email: cleanEmail || 'user@notarychain.com',
-        firstName: 'NotaryChain',
-        lastName: 'User',
-        role: 'company',
-        isEmailVerified: true
-      };
+      throw new err.NotFoundError('No registered account found in database. Please create an account first.');
     }
 
     let memoryRecord = mongoDbFallbackStore.get(cleanEmail) || {};
