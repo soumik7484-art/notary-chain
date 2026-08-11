@@ -444,7 +444,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
           const tokens = { accessToken, refreshToken };
           return resU.success(res, { user: registeredUser, tokens }, 'Security passkey enrolled in MongoDB successfully!');
         } else {
-          throw new err.UnauthorizedError('I think you should not have any account, so first create an account.');
+          throw new err.UnauthorizedError('Wrong password.');
         }
       }
 
@@ -456,7 +456,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
       }
 
       if (!isMatch) {
-        throw new err.UnauthorizedError('I think you should not have any account, so first create an account.');
+        throw new err.UnauthorizedError('Wrong password.');
       }
 
       userRecord.lastVerification = Date.now();

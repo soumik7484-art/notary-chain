@@ -387,10 +387,9 @@ const IdentityVerification = () => {
 
       setTimeout(() => navigate('/dashboard'), 800);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Passkey verification failed.';
-      const popupMsg = msg.includes('Passkey') || msg.includes('account') ? msg : 'I think you should not have any account, so first create an account.';
-      setVerificationError(popupMsg);
-      toast.error(popupMsg, { duration: 5000 });
+      const msg = err.response?.data?.message || 'Wrong password.';
+      setVerificationError(msg);
+      toast.error(msg, { duration: 4000 });
     } finally {
       setPasswordVerifying(false);
     }
