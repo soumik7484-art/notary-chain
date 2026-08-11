@@ -48,23 +48,49 @@ export default function FloatingChatbot({ documentId = null, documentContext = '
     }
   }, [open, minimized]);
 
+  const OFF_TOPIC_REJECTION = "I only give information about NotaryChain, document verification, blockchain anchoring, face biometrics, and Polygon Neobank payments.";
+
+  const isOffTopic = (text) => {
+    const q = text.toLowerCase();
+    const triggers = [
+      'python', 'java ', 'c++', 'javascript code', 'write code', 'array code',
+      'recipe', 'joke', 'movie', 'weather', 'song', 'lyrics', 'solve math',
+      'who is president', 'who won'
+    ];
+    if (triggers.some(t => q.includes(t))) {
+      if (!q.includes('notary') && !q.includes('chain') && !q.includes('polygon') && !q.includes('hash')) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const sendMessage = async (e) => {
     e?.preventDefault();
     if (!input.trim() || loading) return;
     const userMsg = input.trim();
     setInput('');
     setHistory(prev => [...prev, { role: 'user', content: userMsg }]);
+
+    if (isOffTopic(userMsg)) {
+      setHistory(prev => [...prev, { role: 'assistant', content: OFF_TOPIC_REJECTION }]);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await groqChat(documentId, userMsg, history.slice(-8), documentContext);
-      const reply = res?.data?.data?.reply || res?.data?.reply || res?.reply || "NotaryChain AI is ready. Ask me anything about document verification or notarization!";
+      let reply = res?.data?.data?.reply || res?.data?.reply || res?.reply || OFF_TOPIC_REJECTION;
+      if (isOffTopic(reply) || reply.includes('```python') || reply.includes('```javascript') || reply.includes('my_array =')) {
+        reply = OFF_TOPIC_REJECTION;
+      }
       setHistory(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err) {
       if (err.response?.status === 429 || err.response?.data?.code === 'RATE_LIMITED') {
         const retrySec = err.response?.data?.retryAfter || 10;
         setHistory(prev => [...prev, { role: 'assistant', content: `⏳ AI service is temporarily rate-limited. Please wait ${retrySec} seconds before sending another message.` }]);
       } else {
-        setHistory(prev => [...prev, { role: 'assistant', content: "NotaryChain AI is ready. You can ask about document verification, SHA-256 hashing, or Polygon Neobank transactions!" }]);
+        setHistory(prev => [...prev, { role: 'assistant', content: OFF_TOPIC_REJECTION }]);
       }
     } finally {
       setLoading(false);
