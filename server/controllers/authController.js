@@ -271,7 +271,7 @@ exports.googleAuthInit = async (req, res, next) => {
           name: payloadDecoded.name || payloadDecoded.displayName || (payloadDecoded.email ? payloadDecoded.email.split('@')[0] : 'Google User'),
           picture: payloadDecoded.picture || payloadDecoded.photoURL || ''
         };
-      } else if (idToken === 'demo-google-id-token' || idToken?.startsWith('demo-') || process.env.NODE_ENV !== 'production') {
+      } else if (idToken === 'demo-google-id-token') {
         decoded = {
           uid: 'google-demo-uid-789',
           email: 'soumik7484@gmail.com',

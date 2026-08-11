@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
     const cleanEmail = (firebaseUser?.email || '').toLowerCase().trim();
 
     if (mode === 'register' && cleanEmail && isEmailRegisteredLocally(cleanEmail)) {
-      throw new Error('Already signed in with this account. Please sign in instead.');
+      throw new Error('An account with this email already exists. Please log in instead.');
     }
 
     const fullName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Google User';
@@ -102,8 +102,10 @@ export const AuthProvider = ({ children }) => {
 
     const mergedUser = { ...googleUser, ...backendUser, avatar: photo || backendUser?.avatar };
 
-    // Register email in local registry
-    registerEmailLocally(cleanEmail);
+    // Register email in local registry ONLY when in register mode
+    if (mode === 'register') {
+      registerEmailLocally(cleanEmail);
+    }
 
     // Always store pending tempToken and enforce 2-step verification (Face ID / Passkey)
     sessionStorage.setItem('pending_google_auth', JSON.stringify({
