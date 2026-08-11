@@ -148,7 +148,7 @@ const SignupForm = () => {
               <p className="text-[11px] text-[#7B746E]">Min 8 characters with letters and numbers</p>
               
               <Input label="Confirm Password" icon={<Lock className="w-4 h-4" />} type="password" placeholder="••••••••" value={formData.confirm} onChange={e => setFormData({...formData, confirm: e.target.value})} required />
-              <Button type="submit" fullWidth size="lg" className="mt-4">Next Step</Button>
+              <Button type="submit" fullWidth size="lg" className="mt-4" disabled={!formData.email.trim() || !formData.password.trim() || !formData.confirm.trim()}>Next Step</Button>
             </motion.div>
           )}
 
@@ -176,7 +176,7 @@ const SignupForm = () => {
 
               <div className="flex gap-3 mt-4">
                 <Button type="button" variant="secondary" onClick={handleBack} className="w-1/3">Back</Button>
-                <Button type="submit" className="w-2/3">Next Step</Button>
+                <Button type="submit" className="w-2/3" disabled={!formData.firstName.trim() || !formData.lastName.trim()}>Next Step</Button>
               </div>
             </motion.div>
           )}

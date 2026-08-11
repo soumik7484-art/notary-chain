@@ -226,6 +226,7 @@ const LoginForm = () => {
         <Button
           type="submit"
           isLoading={loading}
+          disabled={!email.trim() || !password.trim() || loading}
           fullWidth
           size="lg"
         >
