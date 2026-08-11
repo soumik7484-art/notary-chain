@@ -163,12 +163,12 @@ const Sidebar = ({ collapsed, onToggle, isMobileDrawer = false }) => {
             />
           ) : (
             <div className="w-7 h-7 rounded-md bg-[#2D6A4F] text-white flex items-center justify-center shrink-0 text-[11px] font-bold uppercase">
-              {user?.name?.charAt(0) || 'U'}
+              {(user?.name || user?.firstName || 'U').charAt(0)}
             </div>
           )}
           {(!collapsed || isMobileDrawer) && (
             <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-semibold text-[#2D2A27] truncate">{user?.name || 'User'}</p>
+              <p className="text-[12px] font-semibold text-[#2D2A27] truncate">{user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User')}</p>
               <p className="text-[11px] text-[#9B9490] capitalize truncate">{user?.role || 'Company'}</p>
             </div>
           )}

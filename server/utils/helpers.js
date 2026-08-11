@@ -7,8 +7,12 @@ exports.generateUniqueId = () => uuidv4();
 exports.hashSHA256 = d => crypto.createHash('sha256').update(d).digest('hex');
 exports.generateRandomToken = (b = 32) => crypto.randomBytes(b).toString('hex');
 exports.sanitizeUser = u => {
-  const o = u.toObject ? u.toObject() : u;
+  const o = u.toObject ? u.toObject() : { ...u };
   delete o.password; delete o.refreshTokens; delete o.emailVerificationToken; delete o.passwordResetToken;
+  // Always provide a `name` field from firstName + lastName for frontend display
+  if (!o.name && (o.firstName || o.lastName)) {
+    o.name = `${o.firstName || ''} ${o.lastName || ''}`.trim() || 'User';
+  }
   return o;
 };
 exports.calculateFileHash = p => new Promise((res, rej) => {

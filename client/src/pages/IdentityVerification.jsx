@@ -303,6 +303,9 @@ const IdentityVerification = () => {
       }
       updateUser({
         ...userToSave,
+        name: userToSave?.name || pendingUser?.name || profileName || `${userToSave?.firstName || ''} ${userToSave?.lastName || ''}`.trim(),
+        avatar: userToSave?.avatar || pendingUser?.avatar || pendingUser?.photoURL || '',
+        photoURL: userToSave?.photoURL || pendingUser?.photoURL || pendingUser?.avatar || '',
         walletAddress: onboardingWallet || localStorage.getItem('web3_connected_wallet') || '',
         isWeb3User: true
       });
@@ -362,6 +365,9 @@ const IdentityVerification = () => {
       }
       updateUser({
         ...userToSave,
+        name: userToSave?.name || pendingUser?.name || profileName || `${userToSave?.firstName || ''} ${userToSave?.lastName || ''}`.trim(),
+        avatar: userToSave?.avatar || pendingUser?.avatar || pendingUser?.photoURL || '',
+        photoURL: userToSave?.photoURL || pendingUser?.photoURL || pendingUser?.avatar || '',
         walletAddress: onboardingWallet || localStorage.getItem('web3_connected_wallet') || '',
         isWeb3User: true
       });
@@ -455,6 +461,9 @@ const IdentityVerification = () => {
     }
     updateUser({
       ...(verifiedSession || pendingUser || {}),
+      name: verifiedSession?.name || pendingUser?.name || profileName || `${(verifiedSession || pendingUser)?.firstName || ''} ${(verifiedSession || pendingUser)?.lastName || ''}`.trim(),
+      avatar: verifiedSession?.avatar || pendingUser?.avatar || pendingUser?.photoURL || '',
+      photoURL: verifiedSession?.photoURL || pendingUser?.photoURL || pendingUser?.avatar || '',
       walletAddress: finalWallet,
       isWeb3User: true
     });

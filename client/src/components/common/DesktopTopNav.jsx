@@ -89,11 +89,19 @@ const DesktopTopNav = () => {
 
           {/* Profile link */}
           <Link to="/profile" className="flex items-center gap-2 pl-2 border-l border-[#E8E2DA]">
-            <div className="h-8 w-8 rounded-lg bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-              {user?.name?.charAt(0) || 'U'}
-            </div>
+            {user?.avatar || user?.photoURL ? (
+              <img
+                src={user.avatar || user.photoURL}
+                alt="profile"
+                className="h-8 w-8 rounded-lg object-cover shadow-xs border border-[#E8E2DA]"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-lg bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                {(user?.name || user?.firstName || 'U').charAt(0)}
+              </div>
+            )}
             <div className="text-left">
-              <p className="text-xs font-semibold text-[#2E2A26] leading-tight">{user?.name || 'User'}</p>
+              <p className="text-xs font-semibold text-[#2E2A26] leading-tight">{user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User')}</p>
               <p className="text-[10px] text-[#7B746E] capitalize">{user?.role || 'Company'}</p>
             </div>
           </Link>
