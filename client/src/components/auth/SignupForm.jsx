@@ -24,8 +24,35 @@ const SignupForm = () => {
   const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
-  const handleNext = () => setStep(step + 1);
-  const handleBack = () => setStep(step - 1);
+  const [emailCheckLoading, setEmailCheckLoading] = useState(false);
+  const [existingEmailError, setExistingEmailError] = useState('');
+
+  const handleNext = async () => {
+    if (step === 1) {
+      if (isEmailRegisteredLocally(formData.email)) {
+        setExistingEmailError('An account with this email already exists. Please log in instead.');
+        toast.error('An account with this email already exists. Please log in instead.', { duration: 5000 });
+        return;
+      }
+      setEmailCheckLoading(true);
+      setExistingEmailError('');
+      try {
+        const checkRes = await axiosInstance.post('/auth/check-email', { email: formData.email });
+        const exists = checkRes?.data?.data?.exists ?? checkRes?.data?.exists ?? false;
+        if (exists) {
+          setExistingEmailError('An account with this email already exists. Please log in instead.');
+          toast.error('An account with this email already exists. Please log in instead.', { duration: 5000 });
+          return;
+        }
+      } catch (err) {
+        console.warn('[SignupForm] check-email exception:', err.message);
+      } finally {
+        setEmailCheckLoading(false);
+      }
+    }
+    setStep(step + 1);
+  };
+  const handleBack = () => { setExistingEmailError(''); setStep(step - 1); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -134,7 +161,26 @@ const SignupForm = () => {
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-4">
-              <Input label="Email Address" icon={<Mail className="w-4 h-4" />} type="email" placeholder="name@company.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
+              <Input
+                label="Email Address"
+                icon={<Mail className="w-4 h-4" />}
+                type="email"
+                placeholder="name@company.com"
+                value={formData.email}
+                onChange={e => {
+                  setFormData({...formData, email: e.target.value});
+                  if (existingEmailError) setExistingEmailError('');
+                }}
+                required
+              />
+
+              {existingEmailError && (
+                <div className="p-3 rounded-xl bg-[#FEE2E2] border border-[#FCA5A5] text-[#DC2626] text-xs font-semibold text-center flex items-center justify-between">
+                  <span>{existingEmailError}</span>
+                  <Link to="/login" className="underline font-bold hover:text-[#B91C1C]">Log in</Link>
+                </div>
+              )}
+
               <Input label="Password" icon={<Lock className="w-4 h-4" />} type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required />
               
               <div className="flex gap-1 h-1.5 mt-2">
@@ -145,7 +191,9 @@ const SignupForm = () => {
               <p className="text-[11px] text-[#7B746E]">Min 8 characters with letters and numbers</p>
               
               <Input label="Confirm Password" icon={<Lock className="w-4 h-4" />} type="password" placeholder="••••••••" value={formData.confirm} onChange={e => setFormData({...formData, confirm: e.target.value})} required />
-              <Button type="submit" fullWidth size="lg" className="mt-4" disabled={!formData.email.trim() || !formData.password.trim() || !formData.confirm.trim()}>Next Step</Button>
+              <Button type="submit" fullWidth size="lg" className="mt-4" isLoading={emailCheckLoading} disabled={!formData.email.trim() || !formData.password.trim() || !formData.confirm.trim() || emailCheckLoading}>
+                {emailCheckLoading ? 'Checking Account…' : 'Next Step'}
+              </Button>
             </motion.div>
           )}
 

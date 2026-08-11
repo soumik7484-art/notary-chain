@@ -700,3 +700,23 @@ exports.resetAuthDb = async (req, res, next) => {
     next(x);
   }
 };
+
+exports.checkEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) throw new err.BadRequestError('Email is required');
+    const cleanEmail = email.toLowerCase().trim();
+
+    let exists = false;
+    if (mongoose.connection.readyState === 1) {
+      const u = await User.findOne({ email: cleanEmail });
+      if (u) exists = true;
+    } else {
+      exists = mongoDbFallbackStore.has(cleanEmail);
+    }
+
+    return resU.success(res, { exists, email: cleanEmail });
+  } catch (x) {
+    next(x);
+  }
+};

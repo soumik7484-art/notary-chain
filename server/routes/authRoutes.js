@@ -20,5 +20,6 @@ router.get('/me', protect, c.getMe);
 router.get('/sessions', protect, c.getSessions);
 router.delete('/sessions/:id', protect, c.revokeSession);
 router.post('/reset-auth-db', c.resetAuthDb);
+router.post('/check-email', c.checkEmail);
 
 module.exports = router;
