@@ -437,8 +437,18 @@ exports.googleVerifyIdentity = async (req, res, next) => {
         }
       }
 
-      // ONLY allow enrolling a new passkey during initial registration (mode === 'register')
-      if (!isMatch && mode === 'register') {
+      // STRICT VALIDATION: If user already has a registered passkey or password, ANY mismatch MUST be rejected!
+      if (!isMatch && (dbPasskey || dbPassword)) {
+        throw new err.UnauthorizedError('wrong password');
+      }
+
+      // In login mode, if passkey does not match, throw wrong password!
+      if (!isMatch && mode === 'login') {
+        throw new err.UnauthorizedError('wrong password');
+      }
+
+      // ONLY allow enrolling a new passkey if user has NO passkey and NO password yet AND mode === 'register'
+      if (!isMatch && mode === 'register' && !dbPasskey && !dbPassword) {
         const hashedPasskey = await bcrypt.hash(passkey, 12);
         memoryRecord.passkey = hashedPasskey;
         memoryRecord.passkeyVerified = true;
