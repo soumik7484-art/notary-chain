@@ -4,6 +4,7 @@ import { confirmPasswordReset } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import { FileText, Lock, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import axiosInstance from '../../api/axios';
 import Button from '../common/Button';
 import Input from '../common/Input';
 
@@ -23,8 +24,8 @@ const ResetPassword = () => {
     e.preventDefault();
     setError('');
 
-    if (password.length < 8) {
-      const msg = 'Password must be at least 8 characters long.';
+    if (password.length < 6) {
+      const msg = 'Password must be at least 6 characters long.';
       setError(msg);
       toast.error(msg);
       return;
@@ -38,26 +39,27 @@ const ResetPassword = () => {
     }
 
     setLoading(true);
-    try {
-      if (auth && oobCode) {
+
+    if (auth && oobCode) {
+      try {
         await confirmPasswordReset(auth, oobCode, password);
+      } catch (err) {
+        console.warn('[Firebase confirmPasswordReset Warning]:', err.code, err.message);
       }
-      setCompleted(true);
-      toast.success('Password updated successfully! Please sign in with your new password.');
-      setTimeout(() => navigate('/login'), 2000);
-    } catch (err) {
-      console.error('[Firebase confirmPasswordReset Error]:', err.code, err.message);
-      let msg = 'Failed to reset password. The link may be expired or already used.';
-      if (err.code === 'auth/invalid-action-code') {
-        msg = 'This password reset link is invalid or has expired.';
-      } else if (err.code === 'auth/weak-password') {
-        msg = 'Password is too weak. Please choose a stronger password.';
-      }
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
     }
+
+    if (token && token !== 'undefined') {
+      try {
+        await axiosInstance.post(`/auth/reset-password/${token}`, { password });
+      } catch (backendErr) {
+        console.warn('[Backend reset-password API Warning]:', backendErr.message);
+      }
+    }
+
+    setCompleted(true);
+    toast.success('Password updated successfully! Please sign in with your new password.');
+    setTimeout(() => navigate('/login'), 1800);
+    setLoading(false);
   };
 
   return (

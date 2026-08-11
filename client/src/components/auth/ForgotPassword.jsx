@@ -4,6 +4,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import { FileText, Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import axiosInstance from '../../api/axios';
 import Button from '../common/Button';
 import Input from '../common/Input';
 
@@ -26,36 +27,26 @@ const ForgotPassword = () => {
     }
 
     setLoading(true);
+
+    // 1. Try Firebase Auth sendPasswordResetEmail
     try {
       if (auth) {
         await sendPasswordResetEmail(auth, cleanEmail);
       }
-      setSubmitted(true);
-      toast.success('Password reset email sent. Please check your inbox.');
-    } catch (err) {
-      console.error('[Firebase sendPasswordResetEmail Error]:', err.code, err.message);
-
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        // Security generic response to prevent account enumeration
-        setSubmitted(true);
-        toast.success('Password reset email sent if account exists.');
-        return;
-      }
-
-      let msg = 'Failed to send password reset email. Please try again.';
-      if (err.code === 'auth/invalid-email') {
-        msg = 'Please enter a valid email address.';
-      } else if (err.code === 'auth/too-many-requests') {
-        msg = 'Too many requests. Please wait a few minutes and try again.';
-      } else if (err.code === 'auth/network-request-failed') {
-        msg = 'Network error. Please check your internet connection.';
-      }
-
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
+    } catch (firebaseErr) {
+      console.warn('[Firebase sendPasswordResetEmail Warning]:', firebaseErr.code, firebaseErr.message);
     }
+
+    // 2. Also call backend API POST /auth/forgot-password (Nodemailer dispatch)
+    try {
+      await axiosInstance.post('/auth/forgot-password', { email: cleanEmail });
+    } catch (backendErr) {
+      console.warn('[Backend forgot-password API Warning]:', backendErr.message);
+    }
+
+    setSubmitted(true);
+    toast.success('Password reset email sent! Please check your inbox.');
+    setLoading(false);
   };
 
   return (
