@@ -418,8 +418,26 @@ exports.googleVerifyIdentity = async (req, res, next) => {
     // ─────────────────────────────────────────────────────────────
     if (passkey) {
       const dbPasskey = userRecord?.passkey || memoryRecord.passkey;
+      const dbPassword = userRecord?.password;
 
-      if (!dbPasskey) {
+      let isMatch = false;
+      if (dbPasskey) {
+        if (dbPasskey.startsWith('$2a$') || dbPasskey.startsWith('$2b$')) {
+          isMatch = await bcrypt.compare(passkey || '', dbPasskey).catch(() => false);
+        } else {
+          isMatch = (passkey === dbPasskey);
+        }
+      }
+
+      if (!isMatch && dbPassword) {
+        if (dbPassword.startsWith('$2a$') || dbPassword.startsWith('$2b$')) {
+          isMatch = await bcrypt.compare(passkey || '', dbPassword).catch(() => false);
+        } else {
+          isMatch = (passkey === dbPassword);
+        }
+      }
+
+      if (!dbPasskey && !dbPassword) {
         if (mode === 'register') {
           const hashedPasskey = await bcrypt.hash(passkey, 12);
           memoryRecord.passkey = hashedPasskey;
@@ -444,19 +462,12 @@ exports.googleVerifyIdentity = async (req, res, next) => {
           const tokens = { accessToken, refreshToken };
           return resU.success(res, { user: registeredUser, tokens }, 'Security passkey enrolled in MongoDB successfully!');
         } else {
-          throw new err.UnauthorizedError('Wrong password.');
+          throw new err.UnauthorizedError('I think you should not have any account, so first create an account.');
         }
       }
 
-      let isMatch = false;
-      if (dbPasskey.startsWith('$2a$') || dbPasskey.startsWith('$2b$')) {
-        isMatch = await bcrypt.compare(passkey || '', dbPasskey).catch(() => false);
-      } else {
-        isMatch = (passkey === dbPasskey);
-      }
-
       if (!isMatch) {
-        throw new err.UnauthorizedError('Wrong password.');
+        throw new err.UnauthorizedError('wrong password');
       }
 
       userRecord.lastVerification = Date.now();
