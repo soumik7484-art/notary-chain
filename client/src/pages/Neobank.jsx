@@ -149,6 +149,20 @@ export const BalanceCard = ({ account, liveBal, syncing, fetchRealBalance, handl
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const [manualWallet, setManualWallet] = useState('');
+
+  const applyManualWallet = (walletAddr) => {
+    const clean = (walletAddr || '').trim();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(clean)) {
+      toast.error('Invalid wallet address. Address must start with 0x followed by 40 hex characters.');
+      return;
+    }
+    localStorage.setItem('web3_connected_wallet', clean);
+    if (updateUser) updateUser({ walletAddress: clean, isWeb3User: true });
+    fetchRealBalance(clean);
+    toast.success(`Wallet connected: ${clean.substring(0, 6)}...${clean.slice(-4)}`);
+  };
+
   return (
     <div
       style={{
@@ -254,7 +268,7 @@ export const BalanceCard = ({ account, liveBal, syncing, fetchRealBalance, handl
         )}
 
         {/* KYC status */}
-        <div className="flex items-center gap-2 mb-5">
+        <div className="flex items-center gap-2 mb-4">
           <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: liveBal?.isSupported === false ? '#D97706' : T.green }} />
           <p className="text-[11px] font-semibold" style={{ color: liveBal?.isSupported === false ? '#D97706' : T.greenText }}>
             {addr
@@ -263,9 +277,39 @@ export const BalanceCard = ({ account, liveBal, syncing, fetchRealBalance, handl
           </p>
         </div>
 
+        {/* Manual Wallet Input Field */}
+        <div className="mb-4 pt-3 border-t border-gray-100">
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+            Or Connect Polygon Address Manually:
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="0x19443302aC781A943AC33b2d228D7736d4E00FE4"
+              value={manualWallet}
+              onChange={(e) => {
+                setManualWallet(e.target.value);
+                if (/^0x[a-fA-F0-9]{40}$/.test(e.target.value.trim())) {
+                  applyManualWallet(e.target.value.trim());
+                }
+              }}
+              className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono text-gray-800 placeholder-gray-400 focus:border-[#2D6A4F] outline-none"
+            />
+            {manualWallet && /^0x[a-fA-F0-9]{40}$/.test(manualWallet.trim()) && (
+              <button
+                type="button"
+                onClick={() => applyManualWallet(manualWallet.trim())}
+                className="px-3 py-1.5 bg-[#2D6A4F] text-white text-xs font-bold rounded-xl hover:bg-[#1B4332] transition-colors"
+              >
+                Connect
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Footer row: address + gas */}
         <div
-          className="flex items-center justify-between gap-3 pt-4"
+          className="flex items-center justify-between gap-3 pt-3"
           style={{ borderTop: `1px solid ${T.border}` }}
         >
           <div className="flex items-center gap-2 min-w-0">
