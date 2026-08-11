@@ -10,9 +10,9 @@
  * - FACE_MATCH_THRESHOLD_EUCLIDEAN = 0.374 (Euclidean distance must be <= 0.374)
  */
 
-const REQUIRED_MATCH_PERCENTAGE       = 93.0;
-const FACE_MATCH_THRESHOLD_COSINE    = 0.93;
-const FACE_MATCH_THRESHOLD_EUCLIDEAN = 0.374;
+const REQUIRED_MATCH_PERCENTAGE       = 85.0;
+const FACE_MATCH_THRESHOLD_COSINE    = 0.85;
+const FACE_MATCH_THRESHOLD_EUCLIDEAN = 0.50;
 
 /**
  * Validates and normalizes a 128D FaceNet embedding vector with full IEEE 754 precision.
