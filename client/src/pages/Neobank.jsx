@@ -997,55 +997,16 @@ export default function Neobank() {
     }
   };
 
-  /* ── MOBILE: untouched iPhone-frame layout ──────────────────── */
+  /* ── RESPONSIVE PC LAYOUT (Unified Mobile & Desktop) ────────────────── */
   return (
     <>
       <div
-        className="lg:hidden min-h-screen flex flex-col items-center justify-start pt-4 px-4 pb-6"
-        style={{ background: T.pageBg }}
-      >
-        <div className="w-full max-w-[390px] flex items-center gap-3 mb-4">
-          <button
-            onClick={handleBack}
-            className="w-9 h-9 flex items-center justify-center rounded-full transition-all active:scale-95"
-            style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadowXs }}
-          >
-            <ArrowLeft className="w-4 h-4" strokeWidth={2.5} style={{ color: T.textPrimary }} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-[15px] flex items-center gap-2 flex-wrap" style={{ color: T.textPrimary }}>
-              Polygon Open Money Stack
-              <StatusPill label="v0.11 Sandbox" variant="green" />
-            </h1>
-            <p className="text-[10px] font-medium mt-0.5" style={{ color: T.textSecondary }}>
-              Custodial USDC · Instant P2P Transfers
-            </p>
-          </div>
-        </div>
-        <IPhoneFrame activeTab={activeTab} onTabChange={setActiveTab}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, x: 8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.2 }}
-              className="flex-1"
-            >
-              {renderScreen()}
-            </motion.div>
-          </AnimatePresence>
-        </IPhoneFrame>
-      </div>
-
-      {/* ── DESKTOP: clean white/light full layout ─────────────── */}
-      <div
-        className="hidden lg:flex min-h-screen flex-col"
+        className="flex min-h-screen flex-col"
         style={{ background: T.pageBg }}
       >
         {/* Top nav bar */}
         <header
-          className="px-6 h-[54px] flex items-center gap-4 sticky top-0 z-30"
+          className="px-4 sm:px-6 h-[54px] flex items-center gap-3 sm:gap-4 sticky top-0 z-30 overflow-x-auto max-w-full no-scrollbar shrink-0"
           style={{
             background: T.surface,
             borderBottom: `1px solid ${T.border}`,
@@ -1055,7 +1016,7 @@ export default function Neobank() {
           {/* Back button */}
           <button
             onClick={handleBack}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95 shrink-0"
             style={{
               background: T.surfaceAlt,
               border: `1px solid ${T.border}`,
@@ -1070,31 +1031,31 @@ export default function Neobank() {
           </button>
 
           {/* Divider */}
-          <div style={{ width: 1, height: 20, background: T.border }} />
+          <div className="shrink-0 hidden sm:block" style={{ width: 1, height: 20, background: T.border }} />
 
           {/* Brand */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 shrink-0">
             <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0"
               style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}` }}
             >
               💳
             </div>
-            <span className="font-bold text-[14px]" style={{ color: T.textPrimary }}>
+            <span className="font-bold text-[13px] sm:text-[14px] whitespace-nowrap" style={{ color: T.textPrimary }}>
               Polygon Open Money Stack
             </span>
             <StatusPill label="v0.11 Sandbox" variant="green" />
           </div>
 
           {/* Nav tabs */}
-          <nav className="ml-auto flex items-center gap-0.5">
+          <nav className="ml-auto flex items-center gap-1 shrink-0 overflow-x-auto py-1">
             {NAV_TABS.map(({ id, label, icon: Icon }) => {
               const active = activeTab === id;
               return (
                 <button
                   key={id}
                   onClick={() => setActiveTab(id)}
-                  className="flex items-center gap-1.5 px-3 h-8 text-xs font-semibold transition-all"
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 h-8 text-xs font-semibold transition-all whitespace-nowrap shrink-0"
                   style={{
                     background:   active ? T.green : 'transparent',
                     color:        active ? '#fff'  : T.textSecondary,
@@ -1112,12 +1073,12 @@ export default function Neobank() {
           </nav>
         </header>
 
-        {/* 3-column content */}
-        <div className="flex-1 flex overflow-hidden">
+        {/* 3-column content (stacked on mobile, side-by-side on desktop) */}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
 
-          {/* LEFT: Balance + Actions + Bank card */}
+          {/* LEFT / TOP: Balance + Actions + Bank card */}
           <aside
-            className="w-[320px] xl:w-[360px] shrink-0 flex flex-col gap-4 p-5 overflow-y-auto"
+            className="w-full lg:w-[320px] xl:w-[360px] shrink-0 flex flex-col gap-4 p-4 sm:p-5 overflow-y-auto"
             style={{
               background: T.pageBg,
               borderRight: `1px solid ${T.border}`,
@@ -1137,10 +1098,10 @@ export default function Neobank() {
             className="flex-1 overflow-y-auto"
             style={{ background: T.pageBg }}
           >
-            <div className="max-w-2xl mx-auto px-8 py-7">
+            <div className="max-w-2xl mx-auto px-4 sm:px-8 py-5 sm:py-7">
               {/* Breadcrumb */}
               <div
-                className="flex items-center gap-1.5 text-[11px] font-medium mb-5"
+                className="flex items-center gap-1.5 text-[11px] font-medium mb-4 sm:mb-5"
                 style={{ color: T.textSecondary }}
               >
                 <span>Polygon Neobank</span>
@@ -1188,9 +1149,9 @@ export default function Neobank() {
             </div>
           </main>
 
-          {/* RIGHT: Transactions + Network */}
+          {/* RIGHT / BOTTOM: Transactions + Network */}
           <aside
-            className="w-[288px] xl:w-[320px] shrink-0 flex flex-col gap-4 p-5 overflow-y-auto"
+            className="w-full lg:w-[288px] xl:w-[320px] shrink-0 flex flex-col gap-4 p-4 sm:p-5 overflow-y-auto"
             style={{
               background: T.pageBg,
               borderLeft: `1px solid ${T.border}`,
