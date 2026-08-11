@@ -862,7 +862,15 @@ export default function Neobank() {
       };
       const handleAccountsChanged = (accs) => {
         if (accs && accs.length > 0) {
-          fetchRealBalance(accs[0]);
+          const selectedAddr = accs[0];
+          localStorage.setItem('web3_connected_wallet', selectedAddr);
+          if (updateUser) updateUser({ walletAddress: selectedAddr, isWeb3User: true });
+          fetchRealBalance(selectedAddr);
+          fetchAccount();
+        } else {
+          localStorage.removeItem('web3_connected_wallet');
+          fetchRealBalance('');
+          fetchAccount();
         }
       };
       window.ethereum.on('chainChanged', handleChainChanged);
@@ -887,8 +895,9 @@ export default function Neobank() {
       if (accounts && accounts.length > 0) {
         const selectedAddr = accounts[0];
         localStorage.setItem('web3_connected_wallet', selectedAddr);
-        if (updateUser) updateUser({ ...user, walletAddress: selectedAddr, isWeb3User: true });
+        if (updateUser) updateUser({ walletAddress: selectedAddr, isWeb3User: true });
         await fetchRealBalance(selectedAddr);
+        await fetchAccount();
         toast.success(`MetaMask Connected: ${selectedAddr.substring(0, 6)}...${selectedAddr.slice(-4)}`);
       }
     } catch (err) {
@@ -899,7 +908,11 @@ export default function Neobank() {
   };
 
   const fetchAccount = async () => {
-    const savedWallet = localStorage.getItem('web3_connected_wallet') || '';
+    let savedWallet = localStorage.getItem('web3_connected_wallet') || user?.walletAddress || '';
+    if (window.ethereum && window.ethereum.selectedAddress) {
+      savedWallet = window.ethereum.selectedAddress;
+      localStorage.setItem('web3_connected_wallet', savedWallet);
+    }
     let liveBalance = '0.00';
     let isWeb3Connected = false;
 
