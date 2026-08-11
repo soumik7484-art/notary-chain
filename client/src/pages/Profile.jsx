@@ -13,15 +13,15 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import FaceScannerModal from '../components/auth/FaceScannerModal';
 
 const ROLE_LABELS = {
-  company: 'Company Admin',
-  bank: 'Bank Verifier',
-  notary: 'Notary Officer',
-  admin: 'System Admin',
+  company: 'Website User',
+  bank:    'Website User',
+  notary:  'Notary Officer',
+  admin:   'System Admin',
 };
 
 const ROLE_COLORS = {
   company: 'bg-[#F0FAF5] text-[#2D6A4F] border-[#B3E4CC]',
-  bank:    'bg-[#EBF5FF] text-[#1E40AF] border-[#BFDBFE]',
+  bank:    'bg-[#F0FAF5] text-[#2D6A4F] border-[#B3E4CC]',
   notary:  'bg-[#F3E8FF] text-[#6B21A8] border-[#E9D5FF]',
   admin:   'bg-[#FEF2F2] text-[#991B1B] border-[#FECACA]',
 };
@@ -181,7 +181,7 @@ const Profile = () => {
             <p className="text-[#7B746E] text-sm mt-1 mb-4">{user?.email || 'user@notarychain.com'}</p>
 
             <span className={`px-3.5 py-1 border rounded-full text-xs font-semibold ${ROLE_COLORS[user?.role] || ROLE_COLORS.company}`}>
-              {ROLE_LABELS[user?.role] || 'Company Admin'}
+              {ROLE_LABELS[user?.role] || 'Website User'}
             </span>
 
             {/* Change Avatar Link */}
@@ -320,7 +320,7 @@ const Profile = () => {
                 </label>
                 <div className="w-full px-4 py-3 rounded-xl border bg-[#FAF8F4] border-[#E9E4DD] flex items-center gap-3">
                   <span className={`px-2.5 py-1 border rounded-lg text-xs font-semibold ${ROLE_COLORS[user?.role] || ROLE_COLORS.company}`}>
-                    {ROLE_LABELS[user?.role] || 'Company Admin'}
+                    {ROLE_LABELS[user?.role] || 'Website User'}
                   </span>
                   <span className="text-xs text-[#7B746E]">Contact admin to change your role</span>
                 </div>

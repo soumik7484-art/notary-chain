@@ -102,7 +102,7 @@ const DesktopTopNav = () => {
             )}
             <div className="text-left">
               <p className="text-xs font-semibold text-[#2E2A26] leading-tight">{user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User')}</p>
-              <p className="text-[10px] text-[#7B746E] capitalize">{user?.role || 'Company'}</p>
+              <p className="text-[10px] text-[#7B746E] capitalize">{user?.role === 'admin' ? 'System Admin' : user?.role === 'notary' ? 'Notary Officer' : 'Website User'}</p>
             </div>
           </Link>
 

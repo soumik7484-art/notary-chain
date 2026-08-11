@@ -208,8 +208,9 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('accessToken', 'demo-token');
       }
 
-      const role = email?.includes('admin') ? 'admin' : email?.includes('bank') ? 'bank' : 'company';
+      const role = email?.startsWith('admin') ? 'admin' : email?.startsWith('notary') ? 'notary' : 'company';
       const loggedInUser = userData || { ...DEMO_USER, email, role };
+      if (loggedInUser.role === 'bank') loggedInUser.role = 'company';
       setUser(loggedInUser);
       localStorage.setItem('user_session', JSON.stringify(loggedInUser));
       localStorage.removeItem('face_verified');
@@ -217,7 +218,7 @@ export const AuthProvider = ({ children }) => {
       return payload;
     } catch {
       localStorage.setItem('accessToken', 'demo-token');
-      const role = email?.includes('admin') ? 'admin' : email?.includes('bank') ? 'bank' : 'company';
+      const role = email?.startsWith('admin') ? 'admin' : email?.startsWith('notary') ? 'notary' : 'company';
       const demoAccount = { ...DEMO_USER, email, role };
       setUser(demoAccount);
       localStorage.setItem('user_session', JSON.stringify(demoAccount));
@@ -332,6 +333,7 @@ export const AuthProvider = ({ children }) => {
   const updateUser = useCallback((data) => {
     setUser((prev) => {
       const merged = { ...prev, ...data };
+      if (merged.role === 'bank') merged.role = 'company';
       localStorage.setItem('user_session', JSON.stringify(merged));
       return merged;
     });
