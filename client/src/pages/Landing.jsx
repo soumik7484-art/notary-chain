@@ -238,20 +238,40 @@ const Landing = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                     onClick={() => navigate('/login')}
-                    className="p-7 bg-white border border-[#E8E2DA] rounded-2xl shadow-card hover:shadow-card-hover hover:border-[#2D6A4F] cursor-pointer transition-all group flex flex-col justify-between"
+                    className="p-7 rounded-2xl shadow-card hover:shadow-card-hover cursor-pointer transition-all group flex flex-col justify-between"
+                    style={{
+                      backgroundColor: isDark ? '#1A231E' : '#FFFFFF',
+                      border: `1px solid ${isDark ? '#2D4A3E' : '#E8E2DA'}`,
+                    }}
                   >
                     <div>
-                      <div className="w-14 h-14 rounded-xl bg-[#F0FAF5] border border-[#B3E4CC] text-[#2D6A4F] flex items-center justify-center mb-5 group-hover:bg-[#2D6A4F] group-hover:text-white transition-colors">
+                      <div
+                        className="w-14 h-14 rounded-xl flex items-center justify-center mb-5 group-hover:bg-[#2D6A4F] group-hover:text-white transition-colors"
+                        style={{
+                          backgroundColor: isDark ? 'rgba(45, 106, 79, 0.25)' : '#F0FAF5',
+                          border: `1px solid ${isDark ? '#2D6A4F' : '#B3E4CC'}`,
+                          color: isDark ? '#52B788' : '#2D6A4F',
+                        }}
+                      >
                         <LogIn className="w-7 h-7" />
                       </div>
-                      <h3 className="font-display text-xl font-bold text-[#2E2A26] mb-2">
+                      <h3
+                        className="font-display text-xl font-bold mb-2"
+                        style={{ color: isDark ? '#FFFFFF' : '#2E2A26' }}
+                      >
                         Sign In
                       </h3>
-                      <p className="text-sm text-[#55504B] leading-relaxed font-medium">
+                      <p
+                        className="text-sm leading-relaxed font-medium"
+                        style={{ color: isDark ? '#A3B8AD' : '#55504B' }}
+                      >
                         Access your existing document vault & verification records.
                       </p>
                     </div>
-                    <div className="mt-8 flex items-center justify-between text-sm font-bold text-[#2D6A4F]">
+                    <div
+                      className="mt-8 flex items-center justify-between text-sm font-bold"
+                      style={{ color: isDark ? '#52B788' : '#2D6A4F' }}
+                    >
                       <span>Log in to account</span>
                       <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </div>
@@ -263,20 +283,36 @@ const Landing = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 }}
                     onClick={() => navigate('/signup')}
-                    className="p-7 bg-white border-2 border-[#2D6A4F] rounded-2xl shadow-card hover:shadow-card-hover bg-gradient-to-b from-white to-[#F0FAF5]/80 cursor-pointer transition-all group flex flex-col justify-between"
+                    className="p-7 rounded-2xl shadow-card hover:shadow-card-hover cursor-pointer transition-all group flex flex-col justify-between"
+                    style={{
+                      backgroundColor: isDark ? '#1A231E' : '#FFFFFF',
+                      border: `2px solid ${isDark ? '#52B788' : '#2D6A4F'}`,
+                      backgroundImage: isDark
+                        ? 'linear-gradient(to bottom, #1A231E, rgba(45, 106, 79, 0.2))'
+                        : 'linear-gradient(to bottom, #FFFFFF, rgba(240, 250, 245, 0.8))',
+                    }}
                   >
                     <div>
                       <div className="w-14 h-14 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center mb-5 shadow-xs">
                         <UserPlus className="w-7 h-7" />
                       </div>
-                      <h3 className="font-display text-xl font-bold text-[#2E2A26] mb-2">
+                      <h3
+                        className="font-display text-xl font-bold mb-2"
+                        style={{ color: isDark ? '#FFFFFF' : '#2E2A26' }}
+                      >
                         Create Account
                       </h3>
-                      <p className="text-sm text-[#55504B] leading-relaxed font-medium">
+                      <p
+                        className="text-sm leading-relaxed font-medium"
+                        style={{ color: isDark ? '#A3B8AD' : '#55504B' }}
+                      >
                         Register a new Company, Bank, or Certified Notary profile.
                       </p>
                     </div>
-                    <div className="mt-8 flex items-center justify-between text-sm font-bold text-[#2D6A4F]">
+                    <div
+                      className="mt-8 flex items-center justify-between text-sm font-bold"
+                      style={{ color: isDark ? '#52B788' : '#2D6A4F' }}
+                    >
                       <span>Start registration</span>
                       <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </div>
