@@ -324,9 +324,14 @@ const IdentityVerification = () => {
     } catch (err) {
       console.error('Face verification failed:', err);
       const msg = err.response?.data?.message || err.message || '';
-      const popupMsg = msg.includes('No registered account') || msg.includes('create an account first')
-        ? 'I think you should not have any account, so first create an account.'
-        : 'Your face not matched.';
+      let popupMsg = 'Your face not matched.';
+      if (msg.includes('No registered account') || msg.includes('create an account first')) {
+        popupMsg = 'I think you should not have any account, so first create an account.';
+      } else if (msg.includes('No registered face') || msg.includes('register your face first') || msg.includes('No face biometric profile') || msg.includes('not found in MongoDB')) {
+        popupMsg = 'No face profile registered in MongoDB yet. Positioning face to enroll master face key...';
+        setMode('register');
+        toast.info('No face profile found in MongoDB. Switching to Enroll Face Key mode.', { duration: 4000 });
+      }
       setAuthState('FAILED');
       setVerificationError(popupMsg);
       toast.error(popupMsg, { duration: 5000 });
