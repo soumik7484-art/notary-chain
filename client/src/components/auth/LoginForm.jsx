@@ -41,10 +41,11 @@ const LoginForm = () => {
     } catch (err) {
       const msg = err.message || 'Login failed';
       if (msg.includes('No account found') || msg.includes('user-not-found') || msg.includes('create an account first')) {
-        toast.error('No account found with this email. Please create an account first.');
-        setTimeout(() => navigate('/signup'), 1500);
+        toast.error('No account found with this email. Please create an account first.', { duration: 5000 });
+      } else if (msg.includes('password') || msg.includes('credentials') || msg.includes('Unauthorized')) {
+        toast.error('wrong password', { duration: 5000 });
       } else {
-        toast.error(msg);
+        toast.error(msg, { duration: 5000 });
       }
     } finally {
       setLoading(false);
@@ -64,10 +65,9 @@ const LoginForm = () => {
     } catch (err) {
       const msg = err.message || 'Google sign-in failed.';
       if (msg.includes('No account found') || msg.includes('user-not-found') || msg.includes('create an account first') || msg.includes('Please sign up')) {
-        toast.error('No account found with this Google account. Please create an account first.');
-        setTimeout(() => navigate('/signup'), 1500);
+        toast.error('No account found with this Google account. Please create an account first.', { duration: 5000 });
       } else {
-        toast.error(msg);
+        toast.error(msg, { duration: 5000 });
       }
     } finally {
       setGoogleLoading(false);
