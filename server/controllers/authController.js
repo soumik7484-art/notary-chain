@@ -57,7 +57,7 @@ exports.signup = async (req, res, next) => {
 
     const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
-      throw new err.ConflictError('An account with this email address already exists.');
+      throw new err.ConflictError('Already signed in with this account. Please sign in instead.');
     }
 
     const u = new User({
@@ -290,7 +290,8 @@ exports.googleAuthInit = async (req, res, next) => {
     const cleanEmail = (email || '').toLowerCase().trim();
     let user;
     if (mongoose.connection.readyState === 1) {
-      user = await User.findOne({ $or: [{ googleId }, { email: cleanEmail }] });
+      const query = googleId ? { $or: [{ googleId }, { email: cleanEmail }] } : { email: cleanEmail };
+      user = await User.findOne(query);
       if (mode === 'register' && user) {
         throw new err.ConflictError('Already signed in with this account. Please sign in instead.');
       }
@@ -315,6 +316,10 @@ exports.googleAuthInit = async (req, res, next) => {
         }
       }
     } else {
+      if (mode === 'register' && mongoDbFallbackStore.has(cleanEmail)) {
+        throw new err.ConflictError('Already signed in with this account. Please sign in instead.');
+      }
+      mongoDbFallbackStore.set(cleanEmail, { email: cleanEmail, googleId });
       user = {
         _id: 'demo-google-user',
         email: cleanEmail || 'google-user@notarychain.com',

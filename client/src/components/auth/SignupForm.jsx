@@ -41,7 +41,13 @@ const SignupForm = () => {
       toast.success('Account created! Please complete security & Web3 wallet setup.');
       navigate('/verify-identity');
     } catch (err) {
-      toast.error(err.message || 'Signup failed');
+      const msg = err.message || 'Signup failed';
+      if (msg.includes('Already signed in') || msg.includes('already exists') || msg.includes('Please sign in')) {
+        toast.error('Already signed in with this account. Please sign in instead.');
+        setTimeout(() => navigate('/login'), 1200);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
