@@ -29,6 +29,11 @@ const SignupForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isEmailRegisteredLocally(formData.email)) {
+      toast.error('Already signed in with this account. Please sign in instead.');
+      setTimeout(() => navigate('/login'), 1200);
+      return;
+    }
     if (formData.password !== formData.confirm) return toast.error('Passwords do not match');
     setLoading(true);
     try {

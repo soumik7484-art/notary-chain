@@ -8,6 +8,7 @@ import {
 import toast from 'react-hot-toast';
 import axiosInstance from '../api/axios';
 import { useAuth } from '../hooks/useAuth';
+import { registerEmailLocally } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import { loadFaceApiModels, analyzeWebcamFrame } from '../utils/faceApiLoader';
 
@@ -466,6 +467,7 @@ const IdentityVerification = () => {
     if (finalWallet) {
       localStorage.setItem('web3_connected_wallet', finalWallet);
     }
+    registerEmailLocally((verifiedSession || pendingUser)?.email || profileEmail);
     sessionStorage.removeItem('pending_google_auth');
     if (typeof completeVerification === 'function') {
       completeVerification();

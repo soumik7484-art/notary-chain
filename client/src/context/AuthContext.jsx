@@ -18,6 +18,32 @@ const DEMO_USER = {
 
 const extract = (res) => res?.data?.data ?? res?.data ?? {};
 
+// Local Account Registry Helpers
+export const getRegisteredEmails = () => {
+  try {
+    const list = JSON.parse(localStorage.getItem('notarychain_registered_emails') || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+export const registerEmailLocally = (email) => {
+  if (!email) return;
+  const clean = email.toLowerCase().trim();
+  const list = getRegisteredEmails();
+  if (!list.includes(clean)) {
+    list.push(clean);
+    localStorage.setItem('notarychain_registered_emails', JSON.stringify(list));
+  }
+};
+
+export const isEmailRegisteredLocally = (email) => {
+  if (!email) return false;
+  const clean = email.toLowerCase().trim();
+  return getRegisteredEmails().includes(clean);
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,6 +60,12 @@ export const AuthProvider = ({ children }) => {
 
   // Helper to complete Google auth flow (used by both popup and redirect)
   const completeGoogleAuth = useCallback(async (firebaseUser, mode = 'login') => {
+    const cleanEmail = (firebaseUser?.email || '').toLowerCase().trim();
+
+    if (mode === 'register' && cleanEmail && isEmailRegisteredLocally(cleanEmail)) {
+      throw new Error('Already signed in with this account. Please sign in instead.');
+    }
+
     const fullName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Google User';
     const nameParts = fullName.trim().split(' ');
     const photo = firebaseUser.photoURL || firebaseUser.providerData?.[0]?.photoURL || '';
@@ -69,6 +101,9 @@ export const AuthProvider = ({ children }) => {
     const backendUser = payload?.user;
 
     const mergedUser = { ...googleUser, ...backendUser, avatar: photo || backendUser?.avatar };
+
+    // Register email in local registry
+    registerEmailLocally(cleanEmail);
 
     // Always store pending tempToken and enforce 2-step verification (Face ID / Passkey)
     sessionStorage.setItem('pending_google_auth', JSON.stringify({
