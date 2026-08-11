@@ -85,7 +85,7 @@ const DocumentHistory = () => {
           </div>
           <h3 className="text-sm font-bold text-[#2E2A26]">No documents scanned yet.</h3>
           <p className="text-xs text-[#7B746E] mt-1 max-w-sm mx-auto">
-            Upload and analyze a document with Groq AI to store your local analysis history here.
+            Upload and analyze a document with NotaryChain AI to store your local analysis history here.
           </p>
         </div>
       ) : (

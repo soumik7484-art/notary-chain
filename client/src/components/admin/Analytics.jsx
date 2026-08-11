@@ -151,7 +151,7 @@ export function AnalyticsContent() {
                 <CheckCircle2 className="w-3 h-3" /> High Quality
               </span>
             </div>
-            <p className="text-[11px] text-[#7B746E]">Groq AI Llama 3.3 verification</p>
+            <p className="text-[11px] text-[#7B746E]">NotaryChain AI verification</p>
           </div>
 
           {/* Stat 4: Pending Review */}

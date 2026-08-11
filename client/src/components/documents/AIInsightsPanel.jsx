@@ -78,7 +78,7 @@ export default function AIInsightsPanel({ documentId, fraudMetadata }) {
       setSummaryData(res.data.data);
       toast.success('AI analysis complete!');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'AI analysis failed. Check Groq API key.');
+      toast.error(err.response?.data?.message || 'AI analysis failed. Please try again.');
     } finally {
       setSummaryLoading(false);
     }
@@ -136,7 +136,7 @@ export default function AIInsightsPanel({ documentId, fraudMetadata }) {
           </div>
           <div>
             <h3 className="text-white dark:text-white text-slate-900 font-semibold text-sm">AI Document Insights</h3>
-            <p className="text-xs text-slate-400">Powered by Groq · Llama 3.3 70B</p>
+            <p className="text-xs text-slate-400">Powered by NotaryChain AI Engine</p>
           </div>
           {summaryData && (
             <div className="ml-auto flex items-center gap-2">
@@ -191,7 +191,7 @@ export default function AIInsightsPanel({ documentId, fraudMetadata }) {
                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-500/30 hover:opacity-90 transition-all disabled:opacity-60"
                   >
                     {summaryLoading ? (
-                      <><HiArrowPath className="w-4 h-4 animate-spin" /> Analyzing with Llama 3.3...</>
+                      <><HiArrowPath className="w-4 h-4 animate-spin" /> Analyzing Document...</>
                     ) : (
                       <><HiOutlineSparkles className="w-4 h-4" /> Get AI Summary</>
                     )}

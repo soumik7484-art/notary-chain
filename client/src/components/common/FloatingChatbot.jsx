@@ -141,7 +141,7 @@ export default function FloatingChatbot({ documentId = null, documentContext = '
                 <p className="text-[#2E2A26] text-xs font-bold leading-tight font-display">
                   {documentId ? 'Document Assistant' : 'NotaryChain AI'}
                 </p>
-                <p className="text-[#2D6A4F] text-[10px] font-medium">Llama 3.3 · Always online</p>
+                <p className="text-[#2D6A4F] text-[10px] font-medium">NotaryChain AI · Always online</p>
               </div>
               <div className="flex items-center gap-1">
                 <button

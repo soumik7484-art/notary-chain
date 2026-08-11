@@ -49,7 +49,7 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
     if (!file) return toast.error('Please select a file first');
 
     setUploading(true);
-    const toastId = toast.loading('Uploading & analysing with Groq AI…');
+    const toastId = toast.loading('Uploading & analyzing document…');
 
     try {
       const formData = new FormData();
@@ -112,7 +112,7 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
             </div>
             <div>
               <h2 className="font-display text-base font-bold text-[#2E2A26]">Upload Document</h2>
-              <p className="text-[10px] text-[#7B746E]">AI-powered analysis via Groq · Llama 3.3 70B</p>
+              <p className="text-[10px] text-[#7B746E]">Cryptographic AI Document Analysis</p>
             </div>
           </div>
           <button
@@ -197,7 +197,7 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
                 <div className="flex items-start gap-3 p-3.5 bg-[#F0FAF5] border border-[#B3E4CC] rounded-xl">
                   <Sparkles className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-0.5" />
                   <p className="text-xs text-[#2D6A4F] leading-relaxed">
-                    After upload, <strong>Groq Llama 3.3</strong> will extract text from your document and instantly generate a summary, key terms, and risk flags.
+                    After upload, <strong>NotaryChain AI</strong> will extract text from your document and instantly generate a summary, key terms, and risk flags.
                   </p>
                 </div>
               </motion.div>
@@ -243,8 +243,8 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
                         <Sparkles className="w-4 h-4 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-[#2E2A26]">Groq AI Analysis</p>
-                        <p className="text-[10px] text-[#7B746E]">Llama 3.3 70B · {ai.documentType}</p>
+                        <p className="text-sm font-bold text-[#2E2A26]">AI Document Analysis</p>
+                        <p className="text-[10px] text-[#7B746E]">NotaryChain AI · {ai.documentType}</p>
                       </div>
                       {/* Trust score */}
                       <div className={`ml-auto px-3 py-1 rounded-full border text-xs font-bold ${
@@ -326,7 +326,7 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
               {uploading ? (
                 <span className="flex items-center gap-2">
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  Analysing with Groq…
+                  Scanning Document…
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
