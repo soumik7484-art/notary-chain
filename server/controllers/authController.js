@@ -437,8 +437,8 @@ exports.googleVerifyIdentity = async (req, res, next) => {
         }
       }
 
-      // If passkey did not match and either (mode === 'register' OR no dbPasskey exists), enroll the passkey in MongoDB
-      if (!isMatch && (mode === 'register' || !dbPasskey)) {
+      // ONLY allow enrolling a new passkey during initial registration (mode === 'register')
+      if (!isMatch && mode === 'register') {
         const hashedPasskey = await bcrypt.hash(passkey, 12);
         memoryRecord.passkey = hashedPasskey;
         memoryRecord.passkeyVerified = true;
@@ -463,6 +463,7 @@ exports.googleVerifyIdentity = async (req, res, next) => {
         return resU.success(res, { user: registeredUser, tokens }, 'Security passkey enrolled in MongoDB successfully!');
       }
 
+      // In login mode, if passkey does not match stored passkey or stored password, THROW WRONG PASSWORD!
       if (!isMatch) {
         throw new err.UnauthorizedError('wrong password');
       }
