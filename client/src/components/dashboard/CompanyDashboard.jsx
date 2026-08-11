@@ -135,17 +135,10 @@ const CompanyDashboard = () => {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={fetchDocs}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E9E4DD] bg-white text-[12px] font-medium text-[#55504B] hover:bg-[#F6F3EE] hover:text-[#2D2A27] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E9E4DD] bg-white text-[12px] font-medium text-[#55504B] hover:bg-[#F6F3EE] hover:text-[#2D2A27] transition-colors cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Refresh</span>
-          </button>
-          <button
-            onClick={() => setUploadOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#2D6A4F] text-white text-[12px] font-semibold hover:bg-[#245741] transition-colors shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Upload Document
           </button>
         </div>
       </div>
@@ -315,12 +308,6 @@ const CompanyDashboard = () => {
                   <div className="flex flex-col items-center gap-2 py-8 text-center">
                     <FileText className="w-8 h-8 text-[#D4CECA]" />
                     <p className="text-[12px] text-[#9B9490]">No document audit records yet</p>
-                    <button
-                      onClick={() => setUploadOpen(true)}
-                      className="text-[12px] text-[#2D6A4F] font-bold hover:underline"
-                    >
-                      Upload first doc →
-                    </button>
                   </div>
                 ) : (
                   <div className="relative">
@@ -392,12 +379,6 @@ const CompanyDashboard = () => {
                   <h3 className="text-sm font-bold text-[#2D2A27]">Verification Vault & Queue</h3>
                   <p className="text-[11px] text-[#9B9490]">Cryptographically anchored documents on Polygon Amoy</p>
                 </div>
-                <button
-                  onClick={() => setUploadOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2D6A4F] text-white text-[12px] font-semibold hover:bg-[#245741] transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Upload Document
-                </button>
               </div>
 
               {/* Toolbar */}
@@ -440,12 +421,6 @@ const CompanyDashboard = () => {
                 <div className="p-10 flex flex-col items-center gap-3 text-center">
                   <FileText className="w-8 h-8 text-[#9B9490]" />
                   <p className="text-[13px] font-bold text-[#2D2A27]">No documents found</p>
-                  <button
-                    onClick={() => setUploadOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2D6A4F] text-white text-[12px] font-semibold hover:bg-[#245741] transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Upload Document
-                  </button>
                 </div>
               ) : (
                 <div className="divide-y divide-[#E9E4DD]">
@@ -558,12 +533,7 @@ const CompanyDashboard = () => {
 
       </AnimatePresence>
 
-      {/* Upload Modal */}
-      <DocumentUpload
-        isOpen={isUploadOpen}
-        onClose={() => setUploadOpen(false)}
-        onSuccess={onUploadSuccess}
-      />
+
     </div>
   );
 };
