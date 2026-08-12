@@ -4,23 +4,24 @@
 ![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![Node.js](https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![Express.js](https://img.shields.io/badge/Express.js-4.x-000000?style=for-the-badge&logo=express&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-Latest-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-Atlas_v8-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Polygon Amoy](https://img.shields.io/badge/Polygon_Amoy-Testnet-8247E5?style=for-the-badge&logo=polygon&logoColor=white)
 ![Firebase Auth](https://img.shields.io/badge/Firebase_Auth-v10-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![Groq AI](https://img.shields.io/badge/Groq_AI-Llama_3.3_70B-F55036?style=for-the-badge&logo=groq&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-brightgreen?style=for-the-badge)
 
 ## Next-Generation Blockchain Document Authentication, Biometric Face Verification & Polygon Neobank Platform
 
-NotaryChain is an enterprise-grade Web3 & MERN stack platform engineered to eliminate paper-based document workflows for legal firms, financial institutions, banks, and enterprises. It integrates zero-knowledge SHA-256 document hashing, cryptographic proof sealed on the Polygon Amoy blockchain, AI-driven document analysis, face biometric authentication, and Polygon Open Money Stack (OMS) financial workflows.
+NotaryChain is an enterprise-grade Web3 platform engineered to eliminate paper-based document workflows for legal firms, financial institutions, banks, and enterprises. It integrates zero-knowledge SHA-256 document hashing, cryptographic proof sealed on the Polygon Amoy blockchain, AI-driven document analysis, face biometric authentication, and Polygon Open Money Stack (OMS) financial workflows.
 
 ---
 
 ## 📌 Table of Contents
 - [🌐 Live Production Links](#-live-production-links)
+- [🛠️ Tech Stack & Module Functions](#️-tech-stack--module-functions)
 - [✨ Key Platform Features](#-key-platform-features)
 - [📐 System Architecture](#-system-architecture)
-- [🛠️ Detailed Tech Stack](#️-detailed-tech-stack)
 - [📂 Repository Directory Structure](#-repository-directory-structure)
 - [📡 Core API Endpoints](#-core-api-endpoints)
 - [🔐 Security Protocols & Cryptography](#-security-protocols--cryptography)
@@ -42,10 +43,29 @@ NotaryChain is an enterprise-grade Web3 & MERN stack platform engineered to elim
 
 ---
 
+## 🛠️ Tech Stack & Module Functions
+
+> **Note**: NotaryChain uses **MongoDB Atlas** for data persistence and **Firebase** strictly for Google OAuth client authentication. **Supabase is NOT used in this project.**
+
+| Technology | Role / Category | Functional Purpose in NotaryChain |
+| :--- | :--- | :--- |
+| **MongoDB Atlas** | Primary Database | Stores user profile records, hashed credentials, document metadata, audit trail events, Passkey records, AI analysis reports, and 128D Face ID biometric embeddings. |
+| **Firebase Auth** | Authentication Client | Provides client-side Google OAuth 2.0 authentication for 1-click Google Sign-In and account identity initialization. |
+| **FaceNet 128D Neural AI** | Biometric Verification | Client & server facial feature vector matching (Euclidean distance cutoff 0.58 / 93% match threshold) for 2-Step identity verification. |
+| **Polygon Amoy Testnet** | Blockchain Ledger | Immutable smart contract ledger (`Chain ID: 80002`) used to permanently seal and verify document SHA-256 cryptographic fingerprints. |
+| **Polygon OMS API** | Neobank & Payments | Powers Polygon Open Money Stack (OMS) neobank features including custodial USDC wallets, P2P money transfers, Cash-In deposit barcodes, and bank payouts. |
+| **Groq Llama-3.3-70B** | AI Intelligence Engine | Performs OCR text extraction, contract summarization, key clause extraction, risk flag detection, and overall trust score generation. |
+| **Node.js & Express.js** | Backend API Server | Handles secure REST API endpoints, JWT token verification, database queries, file upload security, and external API orchestration. |
+| **React 18 & Vite** | Frontend Application | High-performance single page application built with Vite for modern web UI rendering and interactive dashboard interfaces. |
+| **TailwindCSS & Framer Motion** | UI Design System | Responsive layout styling, dark mode support, and micro-interaction animations. |
+| **Ethers.js v6** | Web3 Integration | Connects frontend and backend to Polygon Amoy RPC nodes and browser extension wallets (`window.ethereum`). |
+
+---
+
 ## ✨ Key Platform Features
 
 ### 1. 📜 Cryptographic Document Vault & Polygon Anchoring
-- **Zero-Knowledge SHA-256 Hashing**: Generates unique SHA-256 cryptographic fingerprints on the client and server prior to storage.
+- **Zero-Knowledge SHA-256 Hashing**: Generates unique SHA-256 cryptographic fingerprints on client and server prior to storage.
 - **Polygon Amoy Blockchain Proof**: Seals document hashes permanently onto the Polygon Amoy testnet (`Chain ID: 80002`), ensuring immutable tamper resistance.
 - **Public Verification Engine**: Allows third-party auditors to verify any document's authenticity using its SHA-256 hash without exposing confidential document content.
 
@@ -54,23 +74,15 @@ NotaryChain is an enterprise-grade Web3 & MERN stack platform engineered to elim
 - **Multi-Currency Converter**: Live currency switching between USD, USDC, EUR, and INR with real-time conversion rates.
 - **Financial Workflows**: Integrated Cash-In top-ups, bank payouts, and digital deposit barcodes.
 
-### 3. 👤 Biometric Face Verification & AI Liveness Detection
-- **InsightFace AI 512D Embeddings**: Extracts facial vector embeddings to verify user identity against registered profiles during high-security transactions.
+### 3. 👤 Biometric Face Verification & Passkey Authentication
+- **128D FaceNet Embeddings**: Extracts facial vector embeddings to verify user identity against registered profiles during high-security transactions.
+- **Passkey Fallback**: Passkey security fallback for 2-step verification matched against MongoDB hashed credentials.
 - **Real-Time Liveness Detection**: Scans live camera feeds for micro-movement indicators to block photos, videos, or deepfake spoof attempts.
-- **Google OAuth 2FA**: Multi-factor identity confirmation for enterprise role access.
 
 ### 4. 🤖 NotaryChain AI Engine
 - **Document Text Extraction & Summarization**: Automatically parses text from PDFs, images, and DOCX files to generate concise plain-language summaries.
 - **Key Terms & Risk Scoring**: Identifies missing indemnity clauses, risk flags, and assigns a Trust Score (0–100).
-- **Domain-Scoped AI Assistant**: Embedded chatbot that provides guidance on document verification, notarization, and Polygon payments while strictly filtering off-topic queries.
-
-### 5. 🔐 Multi-Layered Authentication & Dual Reset System
-- **Dual Reset Flow**: Combines Firebase Authentication client-side reset with backend Nodemailer SMTP API email dispatch to guarantee password reset delivery.
-- **AES-256 Payload Encryption**: Encrypts sensitive file metadata and user payloads both in transit and at rest.
-
-### 6. ⚡ Real-Time Web3 Wallet Synchronization
-- **Live Account Prioritization**: Dynamically detects `window.ethereum.selectedAddress` to prioritize active browser extension accounts over cached values.
-- **Event-Driven Listeners**: Subscribes to MetaMask `accountsChanged` and `chainChanged` events for instant UI synchronization across all dashboards.
+- **Domain-Scoped AI Assistant**: Embedded chatbot that provides guidance on document verification, notarization, and Polygon payments.
 
 ---
 
@@ -88,26 +100,9 @@ NotaryChain is an enterprise-grade Web3 & MERN stack platform engineered to elim
                                         │           │           │
             ┌───────────────────────────┴─┐   ┌─────┴─────┐   ┌─┴─────────────────────────┐
             │   Polygon Amoy Blockchain   │   │  MongoDB  │   │  Polygon Open Money Stack │
-            │   SHA-256 Smart Contract    │   │  Database │   │  Custodial USDC Sandbox   │
+            │   SHA-256 Smart Contract    │   │  Atlas DB │   │  Custodial USDC Sandbox   │
             └─────────────────────────────┘   └───────────┘   └───────────────────────────┘
 ```
-
----
-
-## 🛠️ Detailed Tech Stack
-
-| Technology Layer | Components & Frameworks | Description |
-| :--- | :--- | :--- |
-| **Frontend Framework** | React `18.3.1`, Vite `8.2` | High-performance single page application |
-| **UI & Animations** | Tailwind CSS `3.x`, Framer Motion, Lucide Icons | Responsive modern design system |
-| **Web3 Client** | Ethers.js `v6`, MetaMask Provider (`window.ethereum`) | Blockchain RPC interaction & wallet sync |
-| **Backend Runtime** | Node.js `v20.x`, Express.js `4.x` | RESTful microservice API architecture |
-| **Database** | MongoDB Atlas, Mongoose ORM `v8.x` | User, Document, and Audit Trail persistence |
-| **Blockchain Ledger** | Polygon Amoy Testnet (`Chain ID: 80002`) | Immutable SHA-256 hash sealing |
-| **Fintech API** | Polygon Open Money Stack (OMS) Sandbox `v0.11` | Custodial USDC payments & wallet banking |
-| **Authentication** | Firebase Auth `v10`, Google OAuth 2.0, JWT Tokens | Authentication & session management |
-| **Email Service** | Nodemailer, SMTP API | Password reset & transaction emails |
-| **Hosting Platform** | Vercel Serverless Platform | Production client hosting |
 
 ---
 
@@ -120,7 +115,7 @@ vibeforge/
 │   │   ├── api/                           # Axios API modules (auth, doc, neobank, ai)
 │   │   ├── components/
 │   │   │   ├── admin/                     # Analytics, Audit Logs, User Management
-│   │   │   ├── auth/                      # Login, Signup, Forgot/Reset Password, FaceScanner
+│   │   │   ├── auth/                      # Login, Signup, Passkey, FaceScanner
 │   │   │   ├── blockchain/                # Polygonscan QR Modal, Ledger Status
 │   │   │   ├── common/                    # DesktopTopNav, Sidebar, MobileBottomNav, FloatingChatbot
 │   │   │   ├── dashboard/                 # Company, Bank, Notary, Admin Dashboards
@@ -149,24 +144,24 @@ vibeforge/
 
 ## 📡 Core API Endpoints
 
-### 🔐 Authentication (`/api/auth`)
-- `POST /api/auth/signup` - Register a new user account
-- `POST /api/auth/login` - Authenticate user & issue JWT token pair
-- `POST /api/auth/forgot-password` - Trigger dual password reset email
-- `POST /api/auth/reset-password/:token` - Confirm password reset
-- `GET /api/auth/me` - Fetch authenticated user profile
+### 🔐 Authentication (`/api/v1/auth`)
+- `POST /api/v1/auth/signup` - Register a new user account
+- `POST /api/v1/auth/login` - Authenticate user & issue JWT token pair
+- `POST /api/v1/auth/google/init` - Initialize Google OAuth session
+- `POST /api/v1/auth/google/verify-identity` - Execute 2-Step Face ID or Passkey verification
+- `GET /api/v1/auth/me` - Fetch authenticated user profile
 
-### 📜 Documents & Blockchain (`/api/documents`)
-- `GET /api/documents` - Fetch user's uploaded & tested document history
-- `POST /api/documents/upload` - Upload file, compute SHA-256 hash & execute AI analysis
-- `GET /api/documents/:id` - Fetch document details & blockchain transaction receipt
-- `POST /api/documents/:id/anchor` - Anchor document SHA-256 hash to Polygon Amoy
+### 📜 Documents & Blockchain (`/api/v1/documents`)
+- `GET /api/v1/documents` - Fetch user's uploaded document history
+- `POST /api/v1/documents/upload` - Upload file, compute SHA-256 hash & execute AI analysis
+- `GET /api/v1/documents/:id` - Fetch document details & blockchain transaction receipt
+- `POST /api/v1/documents/:id/anchor` - Anchor document SHA-256 hash to Polygon Amoy
 
-### 💳 Polygon Neobank (`/api/neobank`)
-- `GET /api/neobank/account` - Fetch custodial USDC account balance & ledger history
-- `POST /api/neobank/send` - Execute instant peer-to-peer USDC transfer
-- `POST /api/neobank/cash-in` - Generate Cash-In deposit barcode & credit balance
-- `POST /api/neobank/withdraw` - Initiate bank payout transfer
+### 💳 Polygon Neobank (`/api/v1/neobank`)
+- `GET /api/v1/neobank/account` - Fetch custodial USDC account balance & ledger history
+- `POST /api/v1/neobank/send` - Execute instant peer-to-peer USDC transfer
+- `POST /api/v1/neobank/cash-in` - Generate Cash-In deposit barcode & credit balance
+- `POST /api/v1/neobank/withdraw` - Initiate bank payout transfer
 
 ---
 
@@ -194,9 +189,8 @@ cd notary-chain
 ```
 
 ### Step 2: Configure Environment Variables
-Create a `.env` file in the project root:
+Create a `.env` file in `server/`:
 ```env
-# Server Configuration
 PORT=5000
 NODE_ENV=development
 CLIENT_URL=http://localhost:3000
