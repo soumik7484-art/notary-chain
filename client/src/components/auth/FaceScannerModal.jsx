@@ -171,16 +171,18 @@ const FaceScannerModal = ({ isOpen, onClose, mode = 'login', onSuccess }) => {
           }, 1200);
         } else {
           setAuthState('FAILED');
-          setMatchResult({ success: false, message: 'Face Not Recognized' });
-          setStatusMsg('Face Match Failed. Captured face does not match MongoDB profile.');
+          setMatchResult({ success: false, message: 'Face not match.' });
+          setStatusMsg('Face not match.');
+          toast.error('Face not match.');
         }
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.detail || 'Face recognition failed';
+      const msg = err.response?.data?.message || err.response?.data?.detail || 'Face not match.';
+      const displayMsg = msg.toLowerCase().includes('face') || msg.includes('95%') ? 'Face not match.' : msg;
       setAuthState('FAILED');
-      setMatchResult({ success: false, message: msg });
-      setStatusMsg(msg);
-      toast.error(msg);
+      setMatchResult({ success: false, message: displayMsg });
+      setStatusMsg(displayMsg);
+      toast.error(displayMsg);
     } finally {
       isVerifyingLockRef.current = false;
     }

@@ -560,16 +560,11 @@ exports.googleVerifyIdentity = async (req, res, next) => {
     // Compare live webcam 128D descriptor against target user's stored 128D descriptor in MongoDB
     const comparison = faceService.compareFacialDescriptors(current128DDescriptor, mongoStoredDescriptor);
 
-    // ZERO-TRUST SECURITY ENFORCEMENT: MUST MATCH AT LEAST 93.0%
-    // Cosine MUST be >= 0.93 AND Euclidean MUST be <= 0.374
-    // If not matched, REJECT ACCESS IMMEDIATELY. NO FALLBACKS!
-    if (!comparison.isMatch) {
-      const isLegacyMismatch = comparison.euclideanDistance > 1.0;
-      const mismatchReason = isLegacyMismatch
-        ? `Legacy Biometric Template Mismatch! Your account in MongoDB was registered with an old canvas model (Distance: ${comparison.euclideanDistance}). Please click "Re-register Face Key" to update your profile with the new 128D FaceNet model.`
-        : `Face Not Recognized! Captured face match score is ${comparison.confidencePercentage}%, which is below the required 93.0% threshold (Distance: ${comparison.euclideanDistance}, Cutoff: 0.374). Access Denied.`;
-
-      throw new err.UnauthorizedError(mismatchReason);
+    // ZERO-TRUST SECURITY ENFORCEMENT: MUST MATCH AT LEAST 95.0%
+    // Cosine MUST be >= 0.95 (Match score >= 95.0%)
+    // If not matched, REJECT ACCESS IMMEDIATELY.
+    if (!comparison.isMatch || comparison.confidencePercentage < 95.0) {
+      throw new err.UnauthorizedError(`Face not match. Captured face match score is ${comparison.confidencePercentage}%, which is below the required 95% threshold.`);
     }
 
     userRecord.faceVerified = true;

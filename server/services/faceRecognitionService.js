@@ -10,9 +10,9 @@
  * - FACE_MATCH_THRESHOLD_EUCLIDEAN = 0.374 (Euclidean distance must be <= 0.374)
  */
 
-const REQUIRED_MATCH_PERCENTAGE       = 75.0;
-const FACE_MATCH_THRESHOLD_COSINE    = 0.75;
-const FACE_MATCH_THRESHOLD_EUCLIDEAN = 0.58;
+const REQUIRED_MATCH_PERCENTAGE       = 95.0;
+const FACE_MATCH_THRESHOLD_COSINE    = 0.95;
+const FACE_MATCH_THRESHOLD_EUCLIDEAN = 0.316;
 
 /**
  * Validates and normalizes a 128D FaceNet embedding vector with full IEEE 754 precision.
@@ -109,14 +109,12 @@ function compareFacialDescriptors(descA, descB) {
   const euclideanDistance = Math.sqrt(sumSqDiff);
   const cosineSimilarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB) || 1.0);
 
-  const rawConfidence = Math.round(Math.max(0, Math.min(99.4, cosineSimilarity * 100)) * 10) / 10;
+  const rawConfidence = Math.round(Math.max(0, Math.min(99.9, cosineSimilarity * 100)) * 10) / 10;
 
-  // STRICT 93.0% MATCH CONDITION:
-  // Cosine similarity MUST be >= 0.93 (Match score >= 93.0%)
-  // Euclidean distance MUST be <= 0.374
+  // STRICT 95.0% MATCH CONDITION:
+  // Cosine similarity MUST be >= 0.95 (Match score >= 95.0%)
   const isMatch = (
     cosineSimilarity >= FACE_MATCH_THRESHOLD_COSINE &&
-    euclideanDistance <= FACE_MATCH_THRESHOLD_EUCLIDEAN &&
     rawConfidence >= REQUIRED_MATCH_PERCENTAGE
   );
 

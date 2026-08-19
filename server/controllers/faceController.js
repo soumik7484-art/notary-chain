@@ -96,22 +96,22 @@ exports.recognizeAndLogin = async (req, res, next) => {
     for (const u of enrolledUsers) {
       const cmp = faceService.compareFacialDescriptors(normalizedCurrent, u.faceEmbedding);
       
-      // STRICT ZERO-TRUST 93.0% MATCH CONDITION:
-      if (cmp.isMatch && cmp.confidencePercentage >= 93.0) {
+      // STRICT ZERO-TRUST 95.0% MATCH CONDITION:
+      if (cmp.isMatch && cmp.confidencePercentage >= 95.0) {
         matchingUser = u;
         matchDetails = cmp;
         break; // Match confirmed
       }
     }
 
-    // If no user satisfied strict 93.0% cutoff: REJECT ACCESS!
+    // If no user satisfied strict 95.0% cutoff: REJECT ACCESS!
     if (!matchingUser || !matchDetails) {
       return res.status(401).json({
         success: false,
         authenticated: false,
-        message: `Face Not Recognized! Match score is ${matchDetails?.confidencePercentage || 0}%, which is below the required 93.0% threshold. Access Denied.`,
+        message: `Face not match. Match score is ${matchDetails?.confidencePercentage || 0}%, which is below the required 95% threshold.`,
         diagnostic: {
-          requiredMatchPercentage: 93.0,
+          requiredMatchPercentage: 95.0,
           euclideanThreshold: faceService.FACE_MATCH_THRESHOLD_EUCLIDEAN,
           cosineThreshold: faceService.FACE_MATCH_THRESHOLD_COSINE
         }
