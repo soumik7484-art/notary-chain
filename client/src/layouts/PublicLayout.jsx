@@ -13,7 +13,7 @@ const PublicLayout = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#FAF8F4] dark:bg-[#0B1120] site-grid-bg flex flex-col font-sans text-[#2E2A26] dark:text-slate-100 transition-colors">
       <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'glass-dark bg-white/80 dark:bg-slate-950/80 shadow-sm border-b border-slate-200 dark:border-slate-800 py-3' : 'bg-transparent py-5'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">

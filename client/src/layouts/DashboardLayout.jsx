@@ -16,10 +16,10 @@ const DashboardLayout = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FAF8F4] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
+      <div className="min-h-screen bg-[#FAF8F4] dark:bg-[#0B1120] site-grid-bg flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 bg-white dark:bg-slate-900 border border-[#E8E2DA] dark:border-slate-800 p-8 rounded-2xl shadow-card">
           <div className="w-8 h-8 border-2 border-[#2D6A4F] border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-[#7B746E] font-medium">Loading workspace…</p>
+          <p className="text-xs text-[#7B746E] dark:text-slate-400 font-medium">Loading workspace…</p>
         </div>
       </div>
     );
@@ -30,7 +30,7 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F4] text-[#2E2A26] flex selection:bg-[#2D6A4F]/20">
+    <div className="min-h-screen bg-[#FAF8F4] dark:bg-[#0B1120] site-grid-bg text-[#2E2A26] dark:text-slate-100 flex selection:bg-[#2D6A4F]/20 transition-colors">
       <ToastProvider />
 
       {/* ── Mobile Sidebar Backdrop ── */}

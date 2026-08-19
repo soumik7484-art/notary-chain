@@ -60,7 +60,7 @@
   --color-error: #DC2626;
 }
 
-/* ── Base Reset ─────────────────────────────────────────── */
+/* ── Base Reset & Global Continuous Grid ─────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -73,40 +73,48 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-size: 48px 48px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.055) 1px, transparent 1px);
 }
 
 /* ── Dark Mode Root Rules ────────────────────────────────── */
 .dark body {
-  background-color: #0F172A;
+  background-color: #0B1120;
   color: #F8FAFC;
+  background-size: 48px 48px;
+  background-image: 
+    linear-gradient(to right, rgba(212, 175, 55, 0.065) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(212, 175, 55, 0.065) 1px, transparent 1px);
 }
 
 .dark header,
 .dark aside,
 .dark nav {
-  background-color: #1E293B !important;
-  border-color: #334155 !important;
+  background-color: #0F172A !important;
+  border-color: #1E293B !important;
   color: #F8FAFC !important;
 }
 
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: #0F172A !important;
+  background-color: #0B1120 !important;
   border-color: #334155 !important;
   color: #F8FAFC !important;
 }
 
 .dark .bg-white {
-  background-color: #1E293B !important;
+  background-color: #0F172A !important;
   color: #F8FAFC !important;
-  border-color: #334155 !important;
+  border-color: #1E293B !important;
 }
 
 .dark .bg-\[\#FAF8F4\],
 .dark .bg-\[\#F6F3EE\],
 .dark .bg-\[\#FFFDF9\] {
-  background-color: #0F172A !important;
+  background-color: #0B1120 !important;
   color: #F8FAFC !important;
 }
 
@@ -114,7 +122,7 @@ body {
 .dark .border-\[\#E8E2DA\],
 .dark .border-\[\#D4CECA\],
 .dark .border-\[\#F0EDE8\] {
-  border-color: #334155 !important;
+  border-color: #1E293B !important;
 }
 
 .dark .text-\[\#2D2A27\],
@@ -130,7 +138,65 @@ body {
 }
 
 .dark tr:hover {
-  background-color: #334155 !important;
+  background-color: #1E293B !important;
+}
+
+/* ── Background Grid Utilities (Single Continuous Hairline System) ──── */
+.site-grid-bg {
+  background-size: 48px 48px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.038) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.038) 1px, transparent 1px);
+}
+
+.dark .site-grid-bg {
+  background-size: 48px 48px;
+  background-image: 
+    linear-gradient(to right, rgba(212, 175, 55, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(212, 175, 55, 0.055) 1px, transparent 1px);
+}
+
+/* Full-bleed unified grid overlay */
+.unified-grid-overlay {
+  background-size: 48px 48px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.038) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.038) 1px, transparent 1px);
+}
+
+.dark .unified-grid-overlay {
+  background-size: 48px 48px;
+  background-image: 
+    linear-gradient(to right, rgba(212, 175, 55, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(212, 175, 55, 0.055) 1px, transparent 1px);
+}
+
+.hero-grid-light {
+  background-size: 48px 48px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse 85% 65% at 50% 18%, black 35%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 65% at 50% 18%, black 35%, transparent 80%);
+}
+
+.dark .hero-grid-dark {
+  background-size: 48px 48px;
+  background-image: 
+    linear-gradient(to right, rgba(212, 175, 55, 0.058) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(212, 175, 55, 0.058) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse 85% 65% at 50% 18%, black 35%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 65% at 50% 18%, black 35%, transparent 80%);
+}
+
+/* ── Glow Auras ─────────────────────────────────────────── */
+.emerald-aura {
+  background: radial-gradient(circle 450px at 50% 20%, rgba(45, 106, 79, 0.12), transparent 75%);
+}
+
+.dark .emerald-aura-dark {
+  background: radial-gradient(circle 500px at 50% 15%, rgba(45, 106, 79, 0.28), transparent 75%),
+              radial-gradient(circle 320px at 50% 30%, rgba(212, 175, 55, 0.09), transparent 70%);
 }
 
 /* ── Typography Helpers ─────────────────────────────────── */
@@ -150,10 +216,13 @@ body {
   box-shadow: 0 1px 3px 0 rgba(46, 42, 38, 0.07), 0 1px 2px -1px rgba(46, 42, 38, 0.05);
 }
 .shadow-card-hover {
-  box-shadow: 0 4px 12px 0 rgba(46, 42, 38, 0.10), 0 2px 4px -1px rgba(46, 42, 38, 0.06);
+  box-shadow: 0 10px 25px -3px rgba(45, 106, 79, 0.08), 0 4px 6px -2px rgba(45, 106, 79, 0.05);
 }
 .shadow-card-lg {
-  box-shadow: 0 8px 24px 0 rgba(46, 42, 38, 0.12), 0 4px 8px -2px rgba(46, 42, 38, 0.08);
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.12), 0 8px 16px -4px rgba(15, 23, 42, 0.08);
+}
+.dark .shadow-card-dark-glow {
+  box-shadow: 0 0 35px -5px rgba(212, 175, 55, 0.08), 0 10px 30px -10px rgba(0, 0, 0, 0.6);
 }
 
 /* ── Focus Ring ─────────────────────────────────────────── */

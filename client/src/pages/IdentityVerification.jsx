@@ -305,12 +305,12 @@ const IdentityVerification = () => {
   const isRegister = mode === 'register';
 
   return (
-    <div className="min-h-screen bg-[#FAF8F4] flex items-center justify-center p-4 lg:p-8 relative text-[#2E2A26]">
+    <div className="min-h-screen bg-[#FAF8F4] dark:bg-[#0B1120] site-grid-bg flex items-center justify-center p-4 lg:p-8 relative text-[#2E2A26] dark:text-slate-100 transition-colors">
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="w-full max-w-5xl bg-white border border-[#E8E2DA] rounded-3xl p-6 lg:p-12 shadow-card-lg relative z-10"
+        className="w-full max-w-5xl bg-white dark:bg-slate-900 border border-[#E8E2DA] dark:border-slate-800 rounded-3xl p-6 lg:p-12 shadow-card-lg relative z-10"
       >
         {/* Title Header */}
         <div className="text-center mb-8">
