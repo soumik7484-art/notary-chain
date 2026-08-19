@@ -1,0 +1,27 @@
+# MASTER SERVICES & SOFTWARE DEVELOPMENT AGREEMENT
+
+Effective Date: [DATE MISSING - UNSTATED]
+
+BETWEEN:
+Client Corp ("Client")
+AND
+Global Dev Studio ("Contractor")
+
+1. SCOPE OF SERVICES
+Contractor shall develop custom fintech blockchain modules, biometric face-verification pipelines, and web3 smart contracts for Client.
+
+2. UNLIMITED UNILATERAL INDEMNIFICATION & LIABILITY
+Contractor shall unconditionally indemnify, defend, and hold harmless Client from any and all claims, losses, damages, liabilities, and legal expenses without any monetary cap or limitation of liability. Contractor waives all rights to counter-claims or dispute mediation.
+
+3. PAYMENT TERMS
+Client shall compensate Contractor $45,000 upon final milestone approval. Client reserves the unilateral right to withhold 100% of payment indefinitely if deliverable does not meet subjective aesthetic expectations.
+
+4. IP OWNERSHIP & MORAL RIGHTS
+All intellectual property created prior to, during, or after this agreement shall immediately transfer to Client worldwide in perpetuity. Contractor forfeits all background patents and open-source contributions.
+
+5. TERMINATION AT WILL
+Client may terminate this agreement immediately at any moment without notice and without paying for work completed in progress.
+
+6. SIGNATURES
+Signed by Client: Authorized Representative
+Signed by Contractor: [PENDING - UNSIGNED]

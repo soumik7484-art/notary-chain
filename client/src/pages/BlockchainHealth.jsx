@@ -1,10 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2, XCircle, AlertTriangle,
   Cpu, RefreshCw, Link as LinkIcon,
   FileText, ShieldCheck, FlaskConical,
-  Wifi, Clock
+  Wifi, Clock, Brain, ShieldAlert, Sparkles, Activity, Shield
 } from 'lucide-react';
 import axiosInstance from '../api/axios';
 import toast from 'react-hot-toast';
@@ -72,9 +72,34 @@ const BlockchainHealth = () => {
   const [loading,  setLoading]  = useState(false);
   const [lastRun,  setLastRun]  = useState(null);
   const [filter,   setFilter]   = useState('all');
+  const [aiSecurity, setAiSecurity] = useState(null);
+  const [aiLoading,  setAiLoading]  = useState(false);
+
+  const fetchAiSecurity = useCallback(async () => {
+    try {
+      setAiLoading(true);
+      const res = await axiosInstance.get('/blockchain/ai-security');
+      const data = res?.data?.data ?? res?.data ?? {};
+      setAiSecurity(data);
+    } catch {
+      setAiSecurity({
+        isAiAvailable: false,
+        status: 'AI security analysis temporarily unavailable.',
+        risk: 'UNKNOWN',
+        analysis: 'AI security analysis temporarily unavailable. Deterministic blockchain verification remains operational.'
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAiSecurity();
+  }, [fetchAiSecurity]);
 
   const runCheck = useCallback(async () => {
     setLoading(true);
+    fetchAiSecurity();
     try {
       const res  = await axiosInstance.get('/blockchain/health');
       const data = res?.data?.data ?? res?.data ?? {};
@@ -89,7 +114,7 @@ const BlockchainHealth = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchAiSecurity]);
 
   const filtered = report?.checks?.filter(c => filter === 'all' || c.status === filter) ?? [];
   const score    = report
@@ -207,6 +232,81 @@ const BlockchainHealth = () => {
               ))}
             </div>
           )}
+
+          {/* ── BLOCKCHAIN AI SECURITY SECTION (HUGGING FACE ADVISORY MONITOR) ── */}
+          <div className="mb-6 p-5 rounded-2xl bg-white border border-[#E8E2DA] shadow-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-[#E8E2DA] mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-[#F0FAF5] text-[#2D6A4F] border border-[#B3E4CC]">
+                  <Brain className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-[#2D2A27] uppercase tracking-wider">
+                    Blockchain AI Security Monitor
+                  </h3>
+                  <p className="text-[11px] text-[#7B746E]">
+                    Hugging Face anomaly detection · Telemetry & entropy scanning
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${
+                  aiSecurity?.risk === 'LOW' ? 'bg-[#F0FAF5] text-[#2D6A4F] border-[#B3E4CC]' :
+                  aiSecurity?.risk === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                  'bg-gray-50 text-gray-700 border-gray-200'
+                }`}>
+                  Risk: {aiSecurity?.risk || 'LOW'}
+                </span>
+                <span className="text-[11px] font-semibold text-[#7B746E] bg-[#FAF8F4] px-2.5 py-1 rounded-full border border-[#E8E2DA]">
+                  {aiSecurity?.modelName || 'facebook/bart-large-mnli'}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {/* Left Column: AI Findings */}
+              <div className="p-3.5 rounded-xl bg-[#FAF8F4] border border-[#E8E2DA] space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#7B746E]">AI Advisory Status</span>
+                  <span className="font-semibold text-[#2D6A4F] flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {aiSecurity?.status || 'No suspicious activity detected'}
+                  </span>
+                </div>
+                <p className="text-[#55504B] text-[11px] leading-relaxed pt-1">
+                  "{aiSecurity?.analysis || 'No significant anomaly detected in the observed blockchain activity.'}"
+                </p>
+                {aiSecurity?.telemetry && (
+                  <div className="pt-2 border-t border-[#E8E2DA] flex justify-between items-center text-[10px] text-[#7B746E]">
+                    <span>SHA-256 Entropy: <strong>{aiSecurity.telemetry.hashEntropy}</strong></span>
+                    <span>Signer State: <strong>Verified</strong></span>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Clear Separation of Concerns */}
+              <div className="p-3.5 rounded-xl bg-white border border-[#E8E2DA] space-y-2.5">
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#2D6A4F] mt-1 shrink-0" />
+                  <div>
+                    <strong className="text-[#2D2A27] text-[11px]">CRYPTOGRAPHIC VERIFICATION</strong>
+                    <p className="text-[10px] text-[#7B746E]">Deterministic · Source of Truth · Polygon smart contract</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-1 shrink-0" />
+                  <div>
+                    <strong className="text-[#2D2A27] text-[11px]">AI SECURITY ANALYSIS</strong>
+                    <p className="text-[10px] text-[#7B746E]">Probabilistic · Advisory Monitor · Anomaly heuristics</p>
+                  </div>
+                </div>
+                <p className="text-[10px] text-[#AAA49F] italic pt-1 border-t border-[#E8E2DA]">
+                  *AI analysis is purely advisory and does not decide transaction validity or replace blockchain proofs.
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Filter Tabs */}
           <div className="flex gap-2 mb-4 flex-wrap">

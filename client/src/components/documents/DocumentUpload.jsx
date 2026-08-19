@@ -15,10 +15,14 @@ const SEV = {
 };
 
 import { useAuth } from '../../hooks/useAuth';
+import { usePlan } from '../../context/PlanContext';
 import { saveDocumentHistory } from '../../utils/documentHistory';
+import UpgradeModal from '../common/UpgradeModal';
 
 const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
   const { user }                  = useAuth();
+  const { canVerify, incrementUsage, isAtLimit, currentPlan } = usePlan();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [file, setFile]           = useState(null);
   const [title, setTitle]         = useState('');
   const [category, setCategory]   = useState('contract');
@@ -48,6 +52,11 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
   const handleUpload = async () => {
     if (!file) return toast.error('Please select a file first');
 
+    if (!canVerify()) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setUploading(true);
     const toastId = toast.loading('Uploading & analyzing document…');
 
@@ -66,6 +75,7 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
       setResult(data);
 
       saveDocumentHistory(user, data, title, category);
+      incrementUsage();
 
       if (data.aiAnalysis) {
         toast.success('Document uploaded & AI analysis complete!', { id: toastId });
@@ -248,11 +258,13 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
                       </div>
                       {/* Trust score */}
                       <div className={`ml-auto px-3 py-1 rounded-full border text-xs font-bold ${
-                        ai.trustScore >= 85 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : ai.trustScore >= 60 ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : 'bg-red-50 text-red-700 border-red-200'
+                        typeof ai.trustScore === 'number'
+                          ? ai.trustScore >= 85 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : ai.trustScore >= 60 ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-gray-50 text-gray-700 border-gray-200'
                       }`}>
-                        Trust {ai.trustScore}/100
+                        {typeof ai.trustScore === 'number' ? `Trust ${ai.trustScore}/100` : 'Analysis Unavailable'}
                       </div>
                     </div>
 
@@ -338,6 +350,12 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
           )}
         </div>
       </motion.div>
+
+      {/* ── Limit Reached Conversion Modal ── */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </div>
   );
 };

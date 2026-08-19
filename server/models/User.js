@@ -32,7 +32,19 @@ const userSchema = new mongoose.Schema({
   walletAddress: { type: String, default: null },
   walletConnected: { type: Boolean, default: false },
   verificationDate: Date,
-  lastVerification: Date
+  lastVerification: Date,
+
+  // Firebase/User Account-Based Subscription & Quota System
+  subscription: {
+    plan: { type: String, enum: ['FREE', 'PRO', 'BUSINESS', 'ENTERPRISE'], default: 'FREE' },
+    verificationCount: { type: Number, default: 0 },
+    verificationLimit: { type: Number, default: 3 },
+    currentPeriodStart: { type: Date, default: Date.now },
+    currentPeriodEnd: { 
+      type: Date, 
+      default: () => new Date(Date.now() + 24 * 60 * 60 * 1000) 
+    }
+  }
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 userSchema.virtual('fullName').get(function() {
@@ -85,6 +97,51 @@ userSchema.methods.createPasswordResetToken = function() {
   this.passwordResetToken = crypto.createHash('sha256').update(token).digest('hex');
   this.passwordResetExpires = Date.now() + 60 * 60 * 1000;
   return token;
+};
+
+userSchema.methods.getQuotaInfo = function() {
+  const now = new Date();
+  if (!this.subscription || typeof this.subscription !== 'object') {
+    this.subscription = {
+      plan: 'FREE',
+      verificationCount: 0,
+      verificationLimit: 3,
+      currentPeriodStart: now,
+      currentPeriodEnd: new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    };
+  }
+  
+  // Enforce 3-doc limit for Free plan if it was previously set to 10
+  if (this.subscription.plan === 'FREE' && (!this.subscription.verificationLimit || this.subscription.verificationLimit > 3)) {
+    this.subscription.verificationLimit = 3;
+  }
+
+  // Check 24-hour rollover
+  if (this.subscription.currentPeriodEnd && now > new Date(this.subscription.currentPeriodEnd)) {
+    this.subscription.verificationCount = 0;
+    this.subscription.currentPeriodStart = now;
+    this.subscription.currentPeriodEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  const plan = this.subscription.plan || 'FREE';
+  const isUnlimited = plan !== 'FREE' || this.subscription.verificationLimit === -1;
+  const limit = isUnlimited ? -1 : (this.subscription.verificationLimit || 3);
+  const count = this.subscription.verificationCount || 0;
+  const remaining = isUnlimited ? -1 : Math.max(0, limit - count);
+  const isAtLimit = !isUnlimited && count >= limit;
+
+  return {
+    plan,
+    verificationCount: count,
+    verificationLimit: limit,
+    remaining: isUnlimited ? 'Unlimited' : remaining,
+    remainingCount: isUnlimited ? 999999 : remaining,
+    isUnlimited,
+    isAtLimit,
+    canVerify: isUnlimited || count < limit,
+    currentPeriodStart: this.subscription.currentPeriodStart,
+    currentPeriodEnd: this.subscription.currentPeriodEnd
+  };
 };
 
 // email is uniquely indexed in schema definition

@@ -5,12 +5,14 @@ import {
   Upload, Plus, Search, FileText, ShieldCheck, Clock,
   ArrowUpRight, ArrowDownLeft, CheckCircle2, XCircle,
   RefreshCw, ExternalLink, Zap, Activity, BarChart3,
-  TrendingUp, AlertCircle, ChevronRight, LayoutGrid, CreditCard, HeartPulse
+  TrendingUp, AlertCircle, ChevronRight, LayoutGrid, CreditCard, HeartPulse,
+  Sparkles, ShieldAlert, Lock, CheckCircle
 } from 'lucide-react';
 import DocumentUpload from '../documents/DocumentUpload';
 import InteractiveNeobankPhone from '../neobank/InteractiveNeobankPhone';
 import Web3WalletSetupBanner from '../common/Web3WalletSetupBanner';
 import { useAuth } from '../../hooks/useAuth';
+import { usePlan } from '../../context/PlanContext';
 import { getDocumentList } from '../../api/documentApi';
 
 /* ─── Tiny helpers ─────────────────────────────────────── */
@@ -74,6 +76,7 @@ const SECTION_TABS = [
 
 const CompanyDashboard = () => {
   const { user } = useAuth();
+  const { currentPlan, verificationsUsed, verificationsLimit, isUnlimited, usagePercentage } = usePlan();
   const [activeSection, setActiveSection] = useState('overview');
   const [isUploadOpen, setUploadOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -110,6 +113,9 @@ const CompanyDashboard = () => {
   const pendingCount = documents.filter(d =>
     ['pending', 'pending_verification', 'under_review'].includes(d.status?.toLowerCase())
   ).length;
+  const rejectedCount = documents.filter(d =>
+    d.status?.toLowerCase() === 'rejected'
+  ).length;
 
   /* Filtered list */
   const filteredDocs = documents.filter((doc) => {
@@ -123,16 +129,29 @@ const CompanyDashboard = () => {
     <div className="space-y-6">
 
       {/* ── Page Header ── */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-bold text-[#2D2A27] tracking-tight">
-            Welcome back, {user?.name?.split(' ')[0] || 'there'} 👋
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-[22px] font-bold text-[#2D2A27] tracking-tight">
+              Welcome back, {user?.name?.split(' ')[0] || 'there'} 👋
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F0FAF5] text-[#2D6A4F] border border-[#B3E4CC]">
+              <Sparkles className="w-3 h-3" />
+              {currentPlan.name} Plan
+            </span>
+          </div>
           <p className="text-[13px] text-[#9B9490] mt-0.5">
-            Polygon Neobank · Blockchain Verification · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            Digital Trust Infrastructure · Polygon Neobank · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <Link
+            to="/pricing"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#2D6A4F] text-white text-[12px] font-semibold hover:bg-[#1B4532] transition-colors shadow-xs"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Manage Plan</span>
+          </Link>
           <button
             onClick={fetchDocs}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E9E4DD] bg-white text-[12px] font-medium text-[#55504B] hover:bg-[#F6F3EE] hover:text-[#2D2A27] transition-colors cursor-pointer"
@@ -265,6 +284,48 @@ const CompanyDashboard = () => {
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-[#9B9490] group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* ── SaaS Business Metrics Row ── */}
+            <div className="bg-white border border-[#E9E4DD] rounded-xl p-5 shadow-xs">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#E9E4DD]">
+                <div>
+                  <h3 className="text-[13px] font-bold text-[#2D2A27]">Document Trust Infrastructure</h3>
+                  <p className="text-[11px] text-[#9B9490]">Real-time cryptographic audit & verification health</p>
+                </div>
+                <Link
+                  to="/pricing"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2D6A4F] hover:underline"
+                >
+                  <span>Plan: {currentPlan.name} ({isUnlimited ? 'Unlimited' : `${verificationsUsed}/${verificationsLimit} used`})</span>
+                  <ArrowUpRight className="w-3 h-3" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="p-3 bg-[#FAF8F4] border border-[#E9E4DD] rounded-lg text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#9B9490]">Documents Verified</span>
+                  <p className="text-xl font-bold text-[#2D2A27] mt-1">{documents.length}</p>
+                </div>
+                <div className="p-3 bg-[#F0FAF5] border border-[#B3E4CC] rounded-lg text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#2D6A4F]">Authentic Documents</span>
+                  <p className="text-xl font-bold text-[#2D6A4F] mt-1">{verifiedCount}</p>
+                </div>
+                <div className="p-3 bg-[#FEF3C7] border border-[#FDE68A] rounded-lg text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#B45309]">Potential Risks</span>
+                  <p className="text-xl font-bold text-[#B45309] mt-1">{pendingCount}</p>
+                </div>
+                <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#DC2626]">Integrity Violations</span>
+                  <p className="text-xl font-bold text-[#DC2626] mt-1">{rejectedCount}</p>
+                </div>
+                <div className="p-3 bg-white border border-[#E9E4DD] rounded-lg text-center col-span-2 md:col-span-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#9B9490]">Plan Usage</span>
+                  <p className="text-xl font-bold text-[#2D2A27] mt-1">
+                    {isUnlimited ? '100%' : `${Math.round(usagePercentage)}%`}
+                  </p>
+                </div>
               </div>
             </div>
 

@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FileText, ShieldCheck, ArrowRight, LogIn, UserPlus, ChevronRight, Sun, Moon
+  FileText, ShieldCheck, ArrowRight, LogIn, UserPlus, ChevronRight, Sun, Moon,
+  Upload, Brain, Shield, AlertTriangle, Hash, Link as LinkIcon, QrCode, Globe,
+  CreditCard, Activity, Building2, Key, Server
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
@@ -116,8 +118,12 @@ const Landing = () => {
             <span className="font-display font-700 text-xl text-[#2E2A26] tracking-tight">NotaryChain</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Dark/Bright Mode Toggle Button */}
+          <div className="flex items-center gap-6">
+            <a href="#pricing" className="hidden md:block text-sm font-semibold text-[#55504B] hover:text-[#2D6A4F] transition-colors">
+              Pricing
+            </a>
+            <div className="flex items-center gap-3">
+              {/* Dark/Bright Mode Toggle Button */}
             <button
               onClick={toggleTheme}
               title={`Switch to ${isDark ? 'Bright (Light)' : 'Dark'} Mode`}
@@ -138,6 +144,7 @@ const Landing = () => {
             >
               Get Started
             </button>
+          </div>
           </div>
         </div>
       </nav>
@@ -331,6 +338,165 @@ const Landing = () => {
             )}
           </AnimatePresence>
 
+        </div>
+      </section>
+
+      {/* ── 'Trusted By' / Social Proof Section ──────────────────────── */}
+      <section className="py-16 px-6 bg-white border-y border-[#E8E2DA] transition-colors relative z-10">
+        <div className="max-w-6xl mx-auto text-center">
+          <p className="text-sm font-bold text-[#7B746E] uppercase tracking-widest mb-10">
+            Built for enterprises, law firms, banks, and governments
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[
+              { label: 'Documents Verified', value: '2.4M+' },
+              { label: 'Trust Score Accuracy', value: '99.9%' },
+              { label: 'Blockchain Proofs', value: '5M+' },
+              { label: 'Active Users', value: '120k+' },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="flex flex-col items-center justify-center p-6 rounded-2xl bg-[#FAF8F4] border border-[#E8E2DA]"
+              >
+                <div className="text-3xl md:text-4xl font-display font-800 text-[#2D6A4F] mb-2">{stat.value}</div>
+                <div className="text-sm font-medium text-[#55504B]">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Product Positioning Statement ────────────────────────────── */}
+      <section className="py-24 px-6 bg-[#1B4532] text-white relative z-10 overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.8)_0,transparent_100%)] pointer-events-none" />
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-3xl md:text-5xl font-display font-bold leading-tight mb-12 text-[#FFFDF9]"
+          >
+            "NotaryChain is digital trust infrastructure for important documents."
+          </motion.h2>
+          <div className="flex flex-wrap justify-center gap-4">
+            {[
+              'AI Analysis', 'Identity Verification', 'Cryptographic Proof', 'Blockchain Anchoring', 'Public Verification'
+            ].map((prop, i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="px-4 py-2 rounded-full bg-[#2D6A4F] text-[#F0FAF5] text-sm font-bold border border-[#52B788]/50 shadow-sm"
+              >
+                {prop}
+              </motion.span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 'How It Works' Section ───────────────────────────────────── */}
+      <section className="py-24 px-6 bg-[#FAF8F4] relative z-10">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-[#2E2A26] mb-4">How NotaryChain Works</h2>
+            <p className="text-[#55504B] max-w-2xl mx-auto">A seamless 6-step process from upload to immutable public verification.</p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
+            {/* Connecting Line for Desktop */}
+            <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-[#E8E2DA] -translate-y-1/2 z-0" />
+            
+            {[
+              { icon: Upload, title: '1. Upload Document', desc: 'Securely upload your files into the encrypted vault.' },
+              { icon: Brain, title: '2. AI Analysis', desc: 'Models extract text and verify document structure.' },
+              { icon: Shield, title: '3. Trust Score', desc: 'Assigns a reliability score based on biometric checks.' },
+              { icon: AlertTriangle, title: '4. Risk Analysis', desc: 'Flags anomalies, tampering, or fraudulent patterns.' },
+              { icon: Hash, title: '5. SHA-256 Hash', desc: 'Generates a unique cryptographic fingerprint.' },
+              { icon: LinkIcon, title: '6. Blockchain Proof', desc: 'Anchors the hash to the Polygon network permanently.' },
+            ].map((step, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+                className="bg-white p-8 rounded-2xl border border-[#E8E2DA] shadow-sm relative z-10 hover:shadow-md transition-shadow"
+              >
+                <div className="w-12 h-12 bg-[#F0FAF5] text-[#2D6A4F] rounded-xl flex items-center justify-center mb-6 border border-[#B3E4CC]">
+                  <step.icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-[#2E2A26] mb-2">{step.title}</h3>
+                <p className="text-[#7B746E] text-sm leading-relaxed">{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+          
+          <div className="mt-12 flex justify-center gap-6">
+             <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-[#E8E2DA] shadow-sm"
+              >
+                <QrCode className="w-6 h-6 text-[#2D6A4F]" />
+                <span className="text-sm font-bold text-[#2E2A26]">Scan QR Code</span>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 }}
+                className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-[#E8E2DA] shadow-sm"
+              >
+                <Globe className="w-6 h-6 text-[#2D6A4F]" />
+                <span className="text-sm font-bold text-[#2E2A26]">Public Verification</span>
+              </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Business Model Section ───────────────────────────────────── */}
+      <section className="py-24 px-6 bg-white border-t border-[#E8E2DA] relative z-10" id="pricing">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider bg-[#F0FAF5] px-4 py-2 rounded-full border border-[#B3E4CC] mb-4 inline-block">
+              Business Model
+            </span>
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-[#2E2A26] mb-4">Built as a sustainable business</h2>
+            <p className="text-[#55504B] max-w-2xl mx-auto">Designed for long-term viability with enterprise-grade revenue streams.</p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { icon: CreditCard, title: 'SaaS Subscriptions', desc: 'Tiered monthly plans for regular document verification.' },
+              { icon: Activity, title: 'API Usage', desc: 'Metered access for developers integrating our trust engine.' },
+              { icon: Building2, title: 'Enterprise Contracts', desc: 'Custom agreements for large scale law firms and banks.' },
+              { icon: Key, title: 'Pay-per-Verification', desc: 'Usage-based pricing for one-off document anchoring.' },
+              { icon: Server, title: 'White-Label Infrastructure', desc: 'Licensable tech stack for government and institution portals.' },
+            ].map((model, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+                className="p-8 rounded-2xl bg-[#FAF8F4] border border-[#E8E2DA] hover:border-[#2D6A4F] transition-colors"
+              >
+                <div className="w-10 h-10 bg-white text-[#2D6A4F] rounded-lg flex items-center justify-center mb-5 border border-[#E8E2DA] shadow-sm">
+                  <model.icon className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-[#2E2A26] mb-2">{model.title}</h3>
+                <p className="text-[#7B746E] text-sm leading-relaxed">{model.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 

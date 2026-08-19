@@ -37,3 +37,7 @@ face_service/__pycache__/
 
 # Agent metadata
 .agents/
+
+# Unrelated projects
+Bonetalk/
+

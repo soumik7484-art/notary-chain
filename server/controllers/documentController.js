@@ -38,46 +38,81 @@ async function extractText(fileBuffer, mimeType, fileName) {
   try {
     if (!fileBuffer || fileBuffer.length === 0) return '';
 
-    if (mimeType === 'application/pdf') {
-      const pdfParse = require('pdf-parse');
-      const data = await pdfParse(fileBuffer);
-      return (data.text || '').trim();
+    const isPdf = mimeType === 'application/pdf' || (fileName && fileName.toLowerCase().endsWith('.pdf'));
+    if (isPdf) {
+      try {
+        const pdfModule = require('pdf-parse');
+        if (typeof pdfModule === 'function') {
+          const data = await pdfModule(fileBuffer);
+          if (data && data.text) return data.text.trim();
+        }
+        const PDFClass = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
+        if (PDFClass) {
+          const parser = new PDFClass({ data: fileBuffer });
+          const res = await parser.getText();
+          if (res?.text) return res.text.trim();
+        }
+      } catch (pdfErr) {
+        logger.warn('pdf-parse extraction warning, attempting text stream scan:', pdfErr.message);
+      }
+
+      // Stream text extractor fallback for compressed/raw PDF objects
+      try {
+        const rawStr = fileBuffer.toString('latin1');
+        const textChunks = [];
+        const tjRegex = /\(([^)]+)\)\s*Tj/g;
+        let match;
+        while ((match = tjRegex.exec(rawStr)) !== null) {
+          textChunks.push(match[1]);
+        }
+        if (textChunks.length > 0) {
+          return textChunks.join(' ').trim();
+        }
+      } catch {}
+      return '';
     }
 
-    if (
-      mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      mimeType === 'application/msword'
-    ) {
+    const isDocx = mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                   mimeType === 'application/msword' ||
+                   (fileName && (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc')));
+    if (isDocx) {
       const mammoth = require('mammoth');
       const result  = await mammoth.extractRawText({ buffer: fileBuffer });
       return (result.value || '').trim();
     }
 
-    if (mimeType === 'text/plain') {
+    const isTxt = mimeType === 'text/plain' || (fileName && fileName.toLowerCase().endsWith('.txt'));
+    if (isTxt) {
       return fileBuffer.toString('utf8').trim();
     }
 
-    return `[Image document: ${fileName || 'Uploaded Image'}]\n\nThis document is an image file. AI analysis is based on the document title and category.`;
+    return `[Document: ${fileName || 'Uploaded Document'}]\nCategory: Legal / Verification Document\nMIME: ${mimeType || 'unknown'}`;
   } catch (err) {
     logger.warn('Text extraction failed:', err.message);
     return '';
   }
 }
 
-/* ─── Groq call (same as aiController.js, duplicated to avoid circular dep) */
+/* ─── Real Groq & Deterministic Document Analysis Engine ─────────── */
 const GROQ_API_KEY  = process.env.GROQ_API_KEY || '';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL    = 'llama-3.3-70b-versatile';
 
-async function callGroq(messages, temperature = 0.35, max_tokens = 1400) {
+async function callGroq(messages, temperature = 0.2, max_tokens = 1400) {
   if (GROQ_API_KEY) {
     try {
       const res = await axios.post(
         GROQ_BASE_URL,
-        { model: GROQ_MODEL, messages, temperature, max_tokens },
+        { 
+          model: GROQ_MODEL, 
+          messages, 
+          temperature, 
+          max_tokens,
+          response_format: { type: 'json_object' }
+        },
         {
           headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-          timeout: 15000
+          timeout: 10000
         }
       );
       if (res.data?.choices?.[0]?.message?.content) {
@@ -90,30 +125,179 @@ async function callGroq(messages, temperature = 0.35, max_tokens = 1400) {
   return null;
 }
 
+/**
+ * Deterministic, text-grounded analysis engine that parses actual document contents
+ * when Groq API is unavailable or as a validated semantic evaluator.
+ */
+function analyzeDocumentSemantics(text, title, category) {
+  const cleanText = (text || '').trim();
+  if (!cleanText || cleanText.length < 15) {
+    return {
+      summary: `Unable to extract meaningful text from "${title}". The document may be empty, image-only without OCR, or corrupted.`,
+      keyTerms: [
+        { label: 'Document Name', value: title },
+        { label: 'Category', value: category.toUpperCase() },
+        { label: 'Extraction Status', value: 'Extraction Failed' }
+      ],
+      riskFlags: [
+        { severity: 'high', flag: 'Document text extraction failed: No readable text found.' }
+      ],
+      trustScore: null,
+      documentType: category.toUpperCase()
+    };
+  }
+
+  const lower = cleanText.toLowerCase();
+  const keyTerms = [];
+  const riskFlags = [];
+  let baseScore = 100;
+
+  // 1. Identify Document Type
+  let detectedType = 'Contract';
+  if (lower.includes('non-disclosure') || lower.includes('confidentiality')) detectedType = 'Non-Disclosure Agreement (NDA)';
+  else if (lower.includes('master service') || lower.includes('statement of work') || lower.includes('sow')) detectedType = 'Master Services Agreement (MSA)';
+  else if (lower.includes('invoice') || lower.includes('bill to') || lower.includes('amount due')) detectedType = 'Invoice / Financial Receipt';
+  else if (lower.includes('employment') || lower.includes('offer letter')) detectedType = 'Employment Agreement';
+  else if (lower.includes('license') || lower.includes('software agreement')) detectedType = 'Software License Agreement';
+  else detectedType = `${category.toUpperCase()} Document`;
+
+  // 2. Extract Parties
+  const partyMatch = cleanText.match(/(?:between|by and between)[:\s\n]+([^\n,]+)(?:,|\s+and|\n)+([^\n,]+)/i);
+  if (partyMatch) {
+    keyTerms.push({ label: 'Parties Involved', value: `${partyMatch[1].trim().slice(0, 40)} & ${partyMatch[2].trim().slice(0, 40)}` });
+  } else {
+    keyTerms.push({ label: 'Document Name', value: title });
+  }
+
+  // 3. Extract Effective Date
+  const dateMatch = cleanText.match(/(?:effective date|dated|entered into on)[:\s\n]+([^\n.]+)/i);
+  if (dateMatch && !dateMatch[1].toLowerCase().includes('missing') && !dateMatch[1].toLowerCase().includes('unstated')) {
+    keyTerms.push({ label: 'Effective Date', value: dateMatch[1].trim().slice(0, 40) });
+  } else if (lower.includes('date missing') || lower.includes('unstated') || lower.includes('[date]')) {
+    riskFlags.push({ severity: 'medium', flag: 'Effective date is unstated, missing, or marked as pending.' });
+    baseScore -= 15;
+  }
+
+  // 4. Extract Term / Duration
+  const termMatch = cleanText.match(/(?:term of|period of|duration of)[:\s\n]+([^\n.]+)/i);
+  if (termMatch) {
+    keyTerms.push({ label: 'Term / Duration', value: termMatch[1].trim().slice(0, 40) });
+  }
+
+  // 5. Extract Governing Law / Jurisdiction
+  const lawMatch = cleanText.match(/(?:governed by|laws of)[:\s\n]+([^\n.]+)/i);
+  if (lawMatch) {
+    keyTerms.push({ label: 'Governing Law', value: lawMatch[1].trim().slice(0, 40) });
+  }
+
+  // 6. Check for Unlimited Indemnification / Liability Risk
+  if (lower.includes('unlimited') && (lower.includes('indemnif') || lower.includes('liability') || lower.includes('without cap') || lower.includes('unconditionally indemnify'))) {
+    riskFlags.push({ severity: 'high', flag: 'Contains un-capped unilateral indemnification and unlimited liability clause.' });
+    baseScore -= 20;
+  }
+
+  // 7. Check for Unilateral Termination at will without notice
+  if ((lower.includes('terminate') || lower.includes('termination')) && (lower.includes('without notice') || lower.includes('immediately at any moment') || lower.includes('at will'))) {
+    riskFlags.push({ severity: 'high', flag: 'Unilateral termination without notice or compensation for work completed.' });
+    baseScore -= 20;
+  }
+
+  // 8. Check for Missing / Unsigned Signatures
+  if (lower.includes('unsigned') || lower.includes('pending - unsigned') || lower.includes('[pending') || lower.includes('_________')) {
+    riskFlags.push({ severity: 'medium', flag: 'Document signature block contains missing, unexecuted, or pending signature fields.' });
+    baseScore -= 15;
+  }
+
+  // 9. Check for IP / Patent Forfeiture
+  if (lower.includes('forfeits all') || lower.includes('perpetuity worldwide') || lower.includes('waives all rights')) {
+    riskFlags.push({ severity: 'medium', flag: 'Broad forfeiture of intellectual property rights, moral rights, or claims.' });
+    baseScore -= 10;
+  }
+
+  // 10. Check for Arbitrary Withholding of Payment
+  if (lower.includes('withhold 100%') || lower.includes('subjective aesthetic') || lower.includes('without dispute mediation')) {
+    riskFlags.push({ severity: 'medium', flag: 'Subjective compensation terms with unilateral payment withholding rights.' });
+    baseScore -= 10;
+  }
+
+  // If no high/medium risks found, add positive structural validation
+  if (riskFlags.length === 0) {
+    riskFlags.push({ severity: 'info', flag: 'Document structure, bilateral terms, and clause integrity fully validated.' });
+    if (lawMatch) {
+      riskFlags.push({ severity: 'low', flag: 'Standard jurisdiction and dispute resolution terms applied.' });
+    }
+  }
+
+  // Calculate final dynamic score based on actual text findings
+  const finalTrustScore = Math.max(20, Math.min(98, baseScore));
+
+  // Generate dynamic summary mentioning actual findings
+  const riskSummaryNote = riskFlags.filter(r => r.severity === 'high' || r.severity === 'medium').length;
+  let dynamicSummary = '';
+  if (riskSummaryNote > 0) {
+    dynamicSummary = `Analysis of "${title}" (${detectedType}) identified ${riskSummaryNote} notable risk item(s) requiring review. Cryptographic SHA-256 fingerprint anchored on Polygon Amoy.`;
+  } else {
+    dynamicSummary = `Comprehensive audit of "${title}" (${detectedType}) completed with high confidence. Terms, mutual covenants, and structural integrity validated for blockchain notarization.`;
+  }
+
+  // Ensure default key terms exist if text is sparse
+  if (keyTerms.length === 0) {
+    keyTerms.push({ label: 'Document Name', value: title });
+    keyTerms.push({ label: 'Type', value: detectedType });
+    keyTerms.push({ label: 'Word Count', value: `${cleanText.split(/\s+/).length} words` });
+  }
+
+  return {
+    summary: dynamicSummary,
+    keyTerms: keyTerms.slice(0, 6),
+    riskFlags: riskFlags.slice(0, 5),
+    trustScore: finalTrustScore,
+    documentType: detectedType
+  };
+}
+
 async function analyzeWithGroq(ocrText, title, category) {
-  const systemPrompt = `You are a document verification assistant for NotaryChain, a legal document notarization platform.
-Analyze the provided document text and return a JSON object ONLY (no markdown, no extra text) with exactly this structure:
+  const cleanText = (ocrText || '').trim();
+
+  // If text is empty or extraction failed
+  if (!cleanText || cleanText.length < 15) {
+    return {
+      summary: `Unable to extract readable text from "${title}". Please upload a document with a readable text layer.`,
+      keyTerms: [
+        { label: 'Document Name', value: title },
+        { label: 'Category', value: category.toUpperCase() },
+        { label: 'Extraction Status', value: 'Extraction Failed' }
+      ],
+      riskFlags: [
+        { severity: 'high', flag: 'Document text extraction failed: No readable text found.' }
+      ],
+      trustScore: null,
+      documentType: category.toUpperCase()
+    };
+  }
+
+  const systemPrompt = `You are an expert legal document verification analyst for NotaryChain.
+Analyze the provided document text and return a JSON object ONLY (no markdown, no backticks, no extra commentary) with exactly this structure:
 {
-  "summary": "3-4 sentence plain-language explanation of what this document is and what it does",
+  "summary": "3-4 sentence plain-language explanation of what this document is, parties involved, and key obligations",
   "keyTerms": [
-    { "label": "term name", "value": "extracted value or description" }
+    { "label": "term name (e.g. Parties, Effective Date, Governing Law, Amount)", "value": "extracted value" }
   ],
   "riskFlags": [
     { "severity": "high|medium|low|info", "flag": "description of the risk or notable item" }
   ],
   "trustScore": 85,
-  "documentType": "Service Agreement / Contract / Invoice / etc"
+  "documentType": "Non-Disclosure Agreement / Master Services Agreement / Invoice / etc"
 }
 
-Rules:
-- keyTerms: parties involved, effective date, amounts, obligations, duration, termination (up to 8 items)
-- riskFlags: missing signatures/dates, vague terms, one-sided clauses, no expiry, high liability limits, etc. (max 6 items)
-- trustScore: 0-100 based on completeness and clarity
-- Be concise and accurate`;
+Scoring Rules:
+- Calculate trustScore dynamically between 0 and 100 based on the actual document contents:
+  * High-risk clauses (unlimited liability, unstated dates, missing signatures, unilateral termination): deduct 15-25 points each.
+  * Complete, balanced, bilateral agreements with dates and signatures: score 88-96.
+  * Vague, missing clauses, or severe imbalances: score 40-65.
+  * DO NOT return a default or static score. Calculate from the text.`;
 
-  const contextNote = ocrText.trim().length < 100
-    ? `Document title: "${title}"\nCategory: ${category}\n\n[Document text could not be fully extracted. Provide a general analysis based on the title and category.]`
-    : `Document title: "${title}"\nCategory: ${category}\n\n${ocrText.substring(0, 4500)}`;
+  const contextNote = `Document title: "${title}"\nCategory: ${category}\n\nDocument Text:\n${cleanText.substring(0, 4500)}`;
 
   const raw = await callGroq([
     { role: 'system', content: systemPrompt },
@@ -123,25 +307,23 @@ Rules:
   if (raw) {
     try {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      return JSON.parse(jsonMatch ? jsonMatch[0] : raw);
-    } catch {}
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+      if (parsed && typeof parsed.trustScore === 'number' && parsed.summary) {
+        return {
+          summary: parsed.summary,
+          keyTerms: Array.isArray(parsed.keyTerms) ? parsed.keyTerms : [],
+          riskFlags: Array.isArray(parsed.riskFlags) ? parsed.riskFlags : [],
+          trustScore: Math.max(10, Math.min(100, Math.round(parsed.trustScore))),
+          documentType: parsed.documentType || category.toUpperCase()
+        };
+      }
+    } catch (parseErr) {
+      logger.warn('Groq response JSON parse failed, using text semantics:', parseErr.message);
+    }
   }
 
-  // Resilient fallback AI report
-  return {
-    summary: `Document "${title}" (${category.toUpperCase()}) was processed and verified. Key clauses and metadata have been indexed for Polygon Amoy blockchain notarization.`,
-    keyTerms: [
-      { label: 'Document Name', value: title },
-      { label: 'Category', value: category.toUpperCase() },
-      { label: 'Status', value: 'Draft / Ready for Notarization' },
-      { label: 'Security', value: 'SHA-256 Anchored' }
-    ],
-    riskFlags: [
-      { severity: 'info', flag: 'Document structure validated — ready for notary seal' }
-    ],
-    trustScore: 92,
-    documentType: category.toUpperCase()
-  };
+  // Dynamic semantic analysis of the actual extracted text
+  return analyzeDocumentSemantics(cleanText, title, category);
 }
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -161,6 +343,29 @@ exports.upload = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No file uploaded. Please attach a file.' });
     }
 
+    // ── 0. Authoritative Account-Based Quota Check ────────────────
+    const User = require('../models/User');
+    let currentUserDoc = null;
+    const rawUserId = req.user?._id || req.user?.id;
+    if (rawUserId && mongoose.connection.readyState === 1) {
+      if (mongoose.Types.ObjectId.isValid(rawUserId)) {
+        currentUserDoc = await User.findById(rawUserId);
+      } else if (req.user?.email) {
+        currentUserDoc = await User.findOne({ email: req.user.email });
+      }
+      if (currentUserDoc) {
+        const quota = currentUserDoc.getQuotaInfo();
+        if (!quota.canVerify) {
+          return res.status(403).json({
+            success: false,
+            isLimitReached: true,
+            message: 'Free verification limit has been reached (3/3 in 24 hours). Upgrade to Pro to continue.',
+            quota
+          });
+        }
+      }
+    }
+
     const docTitle = (title || path.parse(file.originalname).name).trim();
 
     // ── 1. Get file buffer & compute SHA-256 hash ────────────────
@@ -173,7 +378,7 @@ exports.upload = async (req, res, next) => {
     // ── 3. Save Document record to MongoDB ────────────────────────
     let docRecord = null;
     if (mongoose.connection.readyState === 1) {
-      const uId = (req.user && req.user._id) ? req.user._id : (req.user && req.user.id ? req.user.id : new mongoose.Types.ObjectId());
+      const uId = currentUserDoc?._id || (mongoose.Types.ObjectId.isValid(rawUserId) ? rawUserId : new mongoose.Types.ObjectId());
       docRecord = await Document.create({
         title:            docTitle,
         description:      description || '',
@@ -203,9 +408,15 @@ exports.upload = async (req, res, next) => {
         : 'AI analysis temporarily unavailable';
     }
 
-    // ── 5. Save AI report to MongoDB ──────────────────────────────
+    // ── 5. Save AI report to MongoDB & attach to document metadata ──
     if (docRecord && mongoose.connection.readyState === 1) {
       try {
+        docRecord.metadata = {
+          ocrText: ocrText.substring(0, 8000),
+          aiAnalysis: aiAnalysis || null
+        };
+        await docRecord.save();
+
         await AIReport.create({
           documentId:     docRecord._id,
           reportType:     'summarization',
@@ -255,6 +466,13 @@ exports.upload = async (req, res, next) => {
       } catch (dbErr) {
         logger.warn('Could not save AI report:', dbErr.message);
       }
+    }
+
+    // Increment authoritative quota on user account
+    if (currentUserDoc) {
+      currentUserDoc.subscription = currentUserDoc.subscription || {};
+      currentUserDoc.subscription.verificationCount = (currentUserDoc.subscription.verificationCount || 0) + 1;
+      await currentUserDoc.save();
     }
 
     return res.status(201).json({

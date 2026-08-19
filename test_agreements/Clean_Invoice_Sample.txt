@@ -1,0 +1,25 @@
+INVOICE #INV-2026-8801
+Date: August 19, 2026
+Due Date: September 18, 2026
+
+Billed To:
+Starlight Media Corp
+100 Innovation Way, Suite 400
+Austin, TX 78701
+
+From:
+CloudScale Technologies Inc.
+55 Tech Boulevard, San Jose, CA
+
+Description of Services:
+1. Enterprise Cloud Hosting & Relayer Infrastructure (Q3 2026) - $12,500.00
+2. Biometric KYC Authentication Node Verification (50,000 requests) - $4,250.00
+3. Dedicated SLA 24/7 Security Monitoring - $2,000.00
+
+Total Amount Due: $18,750.00 USD
+Payment Method: Wire Transfer / Polygon USDC Escrow
+Payment Terms: Net 30 Days
+
+Authorized Signature:
+David Zhang, Director of Finance
+CloudScale Technologies Inc.

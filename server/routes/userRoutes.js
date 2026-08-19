@@ -6,6 +6,8 @@ const { protect } = require('../middleware/auth');
 
 router.use(protect);
 router.get('/profile', c.getProfile);
+router.get('/quota', c.getQuota);
+router.post('/upgrade-plan', c.upgradePlan);
 router.put('/profile', c.updateProfile);
 router.put('/change-password', v(s.changePasswordSchema), c.changePassword);
 router.delete('/account', c.deleteAccount);

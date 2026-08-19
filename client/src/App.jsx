@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { PlanProvider } from './context/PlanContext';
 import { useAuth } from './hooks/useAuth';
 import { Toaster } from 'react-hot-toast';
 
@@ -34,6 +35,7 @@ import NotFound from './pages/NotFound';
 import BlockchainHealth from './pages/BlockchainHealth';
 import IdentityVerification from './pages/IdentityVerification';
 import PublicVerify from './pages/PublicVerify';
+import Pricing from './pages/Pricing';
 
 /**
  * ProtectedRoute — Redirects to /login if user is not authenticated, or /verify-identity if face 2FA pending.
@@ -87,13 +89,15 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <NotificationProvider>
-          <Routes>
-            {/* 1. BEAUTIFUL LANDING PAGE (Application Start & Post-Logout Landing) */}
-            <Route element={<PublicLayout />}>
-              <Route path="/" element={<Landing />} />
-              <Route path="/verify-hash" element={<PublicVerify />} />
-            </Route>
+        <PlanProvider>
+          <NotificationProvider>
+            <Routes>
+              {/* 1. BEAUTIFUL LANDING PAGE (Application Start & Post-Logout Landing) */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<Landing />} />
+                <Route path="/verify-hash" element={<PublicVerify />} />
+                <Route path="/pricing" element={<Pricing />} />
+              </Route>
 
             {/* Standalone Neobank Route (Protected) */}
             <Route path="/neobank" element={<ProtectedRoute><Neobank /></ProtectedRoute>} />
@@ -157,9 +161,10 @@ function App() {
             }}
           />
         </NotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  );
+      </PlanProvider>
+    </AuthProvider>
+  </ThemeProvider>
+);
 }
 
 export default App;

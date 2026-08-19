@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../components/common/Button';
+import { useAuth } from '../hooks/useAuth';
 
 const PublicLayout = () => {
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
+  const isPricingPage = location.pathname === '/pricing';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -22,14 +26,28 @@ const PublicLayout = () => {
           </Link>
           
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600 dark:text-slate-300">
-            <a href="#features" className="hover:text-primary-500 transition-colors">Features</a>
-            <a href="#security" className="hover:text-primary-500 transition-colors">Security</a>
-            <a href="#about" className="hover:text-primary-500 transition-colors">About</a>
+            <a href="/#features" className="hover:text-primary-500 transition-colors">Features</a>
+            <a href="/#security" className="hover:text-primary-500 transition-colors">Security</a>
+            <a href="/pricing" className="hover:text-primary-500 transition-colors">Pricing</a>
           </nav>
           
           <div className="flex items-center gap-3">
-            <Link to="/login"><Button variant="ghost">Log In</Button></Link>
-            <Link to="/signup"><Button variant="primary">Get Started</Button></Link>
+            {isPricingPage ? (
+              <Link to={isAuthenticated ? "/dashboard" : "/"}>
+                <Button variant="secondary" size="sm">
+                  ← Back to {isAuthenticated ? "Dashboard" : "Home"}
+                </Button>
+              </Link>
+            ) : isAuthenticated ? (
+              <Link to="/dashboard">
+                <Button variant="primary" size="sm">Dashboard</Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/login"><Button variant="ghost">Log In</Button></Link>
+                <Link to="/signup"><Button variant="primary">Get Started</Button></Link>
+              </>
+            )}
           </div>
         </div>
       </header>

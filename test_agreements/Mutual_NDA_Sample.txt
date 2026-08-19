@@ -1,0 +1,43 @@
+# MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT
+
+This Mutual Non-Disclosure Agreement ("Agreement") is entered into on this 19th day of August, 2026 ("Effective Date"), by and between:
+
+PARTY A:
+Apex Digital Innovations Pvt. Ltd., having its registered office at Cyber City, Gurugram, India ("Disclosing Party")
+
+AND
+
+PARTY B:
+Nova Ventures LLC, having its principal place of business at 500 Howard Street, San Francisco, CA, USA ("Receiving Party").
+
+1. PURPOSE OF DISCLOSURE
+The parties wish to explore a business opportunity concerning cryptographic document notary infrastructure, smart contract escrow rails, and zero-knowledge identity authentication ("Purpose").
+
+2. DEFINITION OF CONFIDENTIAL INFORMATION
+"Confidential Information" refers to any proprietary information, technical data, trade secrets, algorithm architectures, facial biometric vector models, and business strategies disclosed by either party, whether in oral, written, or electronic form.
+
+3. OBLIGATIONS OF RECEIVING PARTY
+(a) The Receiving Party agrees to hold and maintain all Confidential Information in strictest confidence.
+(b) The Receiving Party shall restrict access to Confidential Information only to employees with a direct need to know.
+(c) The Receiving Party shall not reverse engineer, decompile, or tamper with any software prototypes or cryptographic keys.
+
+4. TERM AND TERMINATION
+This Agreement and the duty of confidentiality shall remain in effect for a period of three (3) years from the Effective Date.
+
+5. GOVERNING LAW & DISPUTE RESOLUTION
+This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, USA. Any unresolved disputes arising hereunder shall be settled by binding arbitration in accordance with the American Arbitration Association (AAA) commercial arbitration rules.
+
+6. REMEDIES AND INJUNCTIVE RELIEF
+Both parties acknowledge that any unauthorized disclosure or breach may cause irreparable harm for which monetary damages alone would be inadequate, entitling the non-breaching party to seek immediate injunctive relief.
+
+IN WITNESS WHEREOF, the parties hereto have executed this Mutual Non-Disclosure Agreement as of the Effective Date.
+
+APEX DIGITAL INNOVATIONS PVT. LTD.
+By: ___________________________
+Name: Rajesh Sharma
+Title: Chief Executive Officer
+
+NOVA VENTURES LLC
+By: ___________________________
+Name: Sarah Jenkins
+Title: Managing Partner

@@ -3,9 +3,48 @@
 const router        = require('express').Router();
 const { protect }   = require('../middleware/auth');
 const blockchain    = require('../services/blockchainService');
+const blockchainSecurity = require('../services/blockchainSecurityService');
 const { hashSHA256 } = require('../utils/helpers');
 const resU          = require('../utils/apiResponse');
 const ApiError      = require('../utils/apiError');
+
+/**
+ * GET /api/blockchain/ai-security
+ * Advisory Hugging Face blockchain telemetry & anomaly monitor.
+ */
+router.get('/ai-security', async (req, res, next) => {
+  try {
+    const analysis = await blockchainSecurity.analyzeBlockchainSecurity();
+    resU.success(res, analysis, 'Blockchain AI Security analysis complete');
+  } catch (err) {
+    resU.success(res, {
+      success: true,
+      isAiAvailable: false,
+      status: 'AI security analysis temporarily unavailable.',
+      risk: 'UNKNOWN',
+      analysis: 'AI security analysis temporarily unavailable. Deterministic blockchain verification is operational.'
+    }, 'Advisory fallback');
+  }
+});
+
+/**
+ * POST /api/blockchain/ai-security-check
+ * Check specific transaction / document hash telemetry with Hugging Face.
+ */
+router.post('/ai-security-check', async (req, res, next) => {
+  try {
+    const analysis = await blockchainSecurity.analyzeBlockchainSecurity(req.body);
+    resU.success(res, analysis, 'Telemetry security check complete');
+  } catch (err) {
+    resU.success(res, {
+      success: true,
+      isAiAvailable: false,
+      status: 'AI security analysis temporarily unavailable.',
+      risk: 'UNKNOWN',
+      analysis: 'AI security analysis temporarily unavailable.'
+    }, 'Advisory fallback');
+  }
+});
 
 /**
  * GET /api/blockchain/health

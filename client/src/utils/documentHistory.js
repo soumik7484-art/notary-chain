@@ -31,7 +31,7 @@ export const saveDocumentHistory = (user, uploadResult, formTitle = '', formCate
     const docTitle = doc.title || formTitle || doc.originalFileName || 'Untitled Document';
     const categoryName = doc.category || formCategory || 'Contract & Agreement';
     const docHash = doc.hash || null;
-    const trustScore = ai.trustScore ?? 90;
+    const trustScore = typeof ai.trustScore === 'number' ? ai.trustScore : null;
     const now = new Date();
 
     const formattedDate = now.toLocaleDateString('en-US', {

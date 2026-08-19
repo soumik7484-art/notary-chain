@@ -4,9 +4,10 @@ import { motion } from 'framer-motion';
 import {
   LayoutDashboard, CreditCard, ShieldCheck, FileText,
   History, BarChart3, Wallet, Settings, ChevronLeft,
-  ChevronRight, X, LogOut, Activity
+  ChevronRight, X, LogOut, Activity, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import UsageTracker from './UsageTracker';
 
 const NAV_ITEMS = [
   { label: 'Dashboard',     path: '/dashboard',         icon: LayoutDashboard, group: 'main' },
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { label: 'History',       path: '/admin/audit',        icon: History,         group: 'records' },
   { label: 'Analytics',     path: '/admin/analytics',    icon: BarChart3,       group: 'records' },
   { label: 'Wallet Health', path: '/blockchain-health',  icon: Activity,        group: 'records' },
+  { label: 'Pricing & Plans', path: '/pricing',          icon: Sparkles,        group: 'account' },
   { label: 'Wallet',        path: '/wallet',             icon: Wallet,          group: 'account' },
   { label: 'Settings',      path: '/settings',           icon: Settings,        group: 'account' },
 ];
@@ -146,6 +148,13 @@ const Sidebar = ({ collapsed, onToggle, isMobileDrawer = false }) => {
           );
         })}
       </nav>
+
+      {/* ── Usage Tracker Widget ── */}
+      {(!collapsed || isMobileDrawer) && (
+        <div className="px-3 pb-2 shrink-0">
+          <UsageTracker />
+        </div>
+      )}
 
       {/* ── User Footer ── */}
       <div className="border-t border-[#E9E4DD] p-3 shrink-0 space-y-1">
