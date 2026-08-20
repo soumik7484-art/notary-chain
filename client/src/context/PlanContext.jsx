@@ -48,6 +48,13 @@ export function PlanProvider({ children }) {
       const res = await api.get('/users/quota');
       const data = res.data?.data || res.data;
       if (data) {
+        if ((data.plan || 'FREE') === 'FREE' && data.currentPeriodEnd) {
+          const endMs = new Date(data.currentPeriodEnd).getTime();
+          const maxMs = Date.now() + 24 * 60 * 60 * 1000;
+          if (endMs > maxMs) {
+            data.currentPeriodEnd = new Date(maxMs).toISOString();
+          }
+        }
         setQuotaData(data);
         // Cache locally strictly scoped by user ID
         localStorage.setItem(getUserStorageKey(user), JSON.stringify(data));
@@ -57,7 +64,15 @@ export function PlanProvider({ children }) {
       const cached = localStorage.getItem(getUserStorageKey(user));
       if (cached) {
         try {
-          setQuotaData(JSON.parse(cached));
+          const parsed = JSON.parse(cached);
+          if ((parsed.plan || 'FREE') === 'FREE' && parsed.currentPeriodEnd) {
+            const endMs = new Date(parsed.currentPeriodEnd).getTime();
+            const maxMs = Date.now() + 24 * 60 * 60 * 1000;
+            if (endMs > maxMs) {
+              parsed.currentPeriodEnd = new Date(maxMs).toISOString();
+            }
+          }
+          setQuotaData(parsed);
         } catch {}
       }
     } finally {
@@ -69,6 +84,38 @@ export function PlanProvider({ children }) {
   useEffect(() => {
     fetchQuota();
   }, [fetchQuota]);
+
+  // Real-time 24-hour rollover watcher: automatically reopens quota after 24 hours
+  useEffect(() => {
+    const checkRollover = () => {
+      if (quotaData.currentPeriodEnd) {
+        const diffMs = new Date(quotaData.currentPeriodEnd).getTime() - Date.now();
+        if (diffMs <= 0) {
+          // 24 hours have passed! Automatically reopen 3/3 verifications
+          setQuotaData(prev => {
+            const resetObj = {
+              ...prev,
+              verificationCount: 0,
+              remaining: prev.isUnlimited ? 'Unlimited' : (prev.verificationLimit || 3),
+              isAtLimit: false,
+              canVerify: true,
+              currentPeriodStart: new Date().toISOString(),
+              currentPeriodEnd: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            };
+            if (user) {
+              localStorage.setItem(getUserStorageKey(user), JSON.stringify(resetObj));
+            }
+            return resetObj;
+          });
+          // Sync with backend
+          fetchQuota();
+        }
+      }
+    };
+
+    const interval = setInterval(checkRollover, 5000);
+    return () => clearInterval(interval);
+  }, [quotaData.currentPeriodEnd, user, fetchQuota]);
 
   const currentPlanKey = (quotaData.plan || 'FREE').toUpperCase();
   const currentPlan = PLANS[currentPlanKey] || PLANS.FREE;

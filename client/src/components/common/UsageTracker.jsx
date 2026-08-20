@@ -1,12 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, Crown, ArrowUpRight, Check, Sparkles, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { usePlan } from '../../context/PlanContext';
 import UpgradeModal from './UpgradeModal';
 
 export default function UsageTracker() {
-  const { currentPlan, currentPlanKey, verificationsUsed, verificationsLimit, remainingCount, isUnlimited, usagePercentage, resetDate } = usePlan();
+  const { currentPlan, currentPlanKey, verificationsUsed, verificationsLimit, remainingCount, isUnlimited, usagePercentage, resetDate, fetchQuota } = usePlan();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  // Live real-time ticking timer (updates every second)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Trigger re-fetch when countdown hits 00s
+  useEffect(() => {
+    if (resetDate) {
+      const diffMs = new Date(resetDate).getTime() - now;
+      if (diffMs <= 0 && diffMs > -2000) {
+        fetchQuota?.();
+      }
+    }
+  }, [now, resetDate, fetchQuota]);
 
   const used = verificationsUsed ?? 0;
   const limit = verificationsLimit ?? 3;
@@ -16,15 +35,59 @@ export default function UsageTracker() {
   if (usagePercentage >= 90 || isLimitReached) progressColor = 'bg-[#DC2626]';
   else if (usagePercentage >= 60) progressColor = 'bg-[#F59E0B]';
 
-  const getResetText = () => {
-    if (!resetDate) return 'Resets in 24 hours';
-    const diffMs = new Date(resetDate) - new Date();
-    if (diffMs <= 0) return 'Resets soon';
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    if (hours >= 24) return 'Resets in 24 hours';
-    if (hours > 0) return `Resets in ${hours}h ${mins}m`;
-    return `Resets in ${Math.max(1, mins)} mins`;
+  const formatResetDateTime = (date) => {
+    const d = date ? new Date(date) : new Date(now + 24 * 60 * 60 * 1000);
+    const validD = isNaN(d.getTime()) ? new Date(now + 24 * 60 * 60 * 1000) : d;
+
+    // Free tier reset is strictly 24 hours
+    const clampedDate = validD.getTime() > now + 24 * 60 * 60 * 1000 + 1000
+      ? new Date(now + 24 * 60 * 60 * 1000)
+      : validD;
+
+    const dateStr = clampedDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    const timeStr = clampedDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
+    let tz = '';
+    try {
+      const parts = clampedDate.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ');
+      const last = parts[parts.length - 1];
+      if (last && !last.includes(':') && !last.includes('/')) {
+        tz = ` ${last}`;
+      }
+    } catch (e) {}
+
+    return `Resets on ${dateStr} at ${timeStr}${tz}`;
+  };
+
+  const getCountdownText = () => {
+    if (!resetDate) return '23h 59m 59s';
+    const target = new Date(resetDate).getTime();
+    const diffMs = target - now;
+
+    if (diffMs <= 0) {
+      return '00h 00m 00s';
+    }
+
+    const totalSecs = Math.floor(diffMs / 1000);
+    // Strictly max 24 hours (23h 59m 59s)
+    const boundedSecs = Math.min(totalSecs, 86399);
+    const hours = Math.floor(boundedSecs / 3600);
+    const mins = Math.floor((boundedSecs % 3600) / 60);
+    const secs = boundedSecs % 60;
+
+    const pad = (n) => String(n).padStart(2, '0');
+
+    return `${pad(hours)}h ${pad(mins)}m ${pad(secs)}s`;
   };
 
   // Pro or Business active state
@@ -99,16 +162,33 @@ export default function UsageTracker() {
           </div>
         </div>
         
-        <div className="flex items-center justify-between text-[10px] text-[#7B746E] pt-1">
-          <span>{getResetText()}</span>
-          {isLimitReached ? (
-            <span className="text-[#DC2626] font-bold flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" /> Limit reached
-            </span>
-          ) : (
+        {isLimitReached ? (
+          <div className="pt-1.5 border-t border-[#E8E2DA]/60 space-y-1">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-[#7B746E] font-medium leading-tight truncate mr-1" title={formatResetDateTime(resetDate)}>
+                {formatResetDateTime(resetDate)}
+              </span>
+              <span className="text-[#DC2626] font-bold flex items-center gap-1 shrink-0">
+                <AlertTriangle className="w-3 h-3" /> Limit reached
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-[#2D6A4F] font-mono font-bold tracking-tight">
+                {getCountdownText()}
+              </span>
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="text-[10px] font-bold text-[#2D6A4F] hover:underline cursor-pointer"
+              >
+                Upgrade now
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="pt-1.5 border-t border-[#E8E2DA]/60 flex justify-between items-center text-[10px] text-[#7B746E]">
             <span>₹499/mo for Pro</span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <UpgradeModal

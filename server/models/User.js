@@ -111,16 +111,28 @@ userSchema.methods.getQuotaInfo = function() {
     };
   }
   
-  // Enforce 3-doc limit for Free plan if it was previously set to 10
-  if (this.subscription.plan === 'FREE' && (!this.subscription.verificationLimit || this.subscription.verificationLimit > 3)) {
+  // Enforce 3-doc limit and strict 24-hour reset window for Free plan
+  if (this.subscription.plan === 'FREE') {
     this.subscription.verificationLimit = 3;
-  }
+    const max24hMs = now.getTime() + 24 * 60 * 60 * 1000;
+    const currentEndMs = new Date(this.subscription.currentPeriodEnd || 0).getTime();
 
-  // Check 24-hour rollover
-  if (this.subscription.currentPeriodEnd && now > new Date(this.subscription.currentPeriodEnd)) {
-    this.subscription.verificationCount = 0;
-    this.subscription.currentPeriodStart = now;
-    this.subscription.currentPeriodEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    // If 24 hours have passed OR if legacy currentPeriodEnd is more than 24h away, reset/clamp to 24h
+    if (!this.subscription.currentPeriodEnd || now > new Date(this.subscription.currentPeriodEnd)) {
+      this.subscription.verificationCount = 0;
+      this.subscription.currentPeriodStart = now;
+      this.subscription.currentPeriodEnd = new Date(max24hMs);
+    } else if (currentEndMs > max24hMs) {
+      // Correct legacy monthly date to strictly 24 hours
+      this.subscription.currentPeriodEnd = new Date(max24hMs);
+    }
+  } else {
+    // Check rollover for paid plans
+    if (this.subscription.currentPeriodEnd && now > new Date(this.subscription.currentPeriodEnd)) {
+      this.subscription.verificationCount = 0;
+      this.subscription.currentPeriodStart = now;
+      this.subscription.currentPeriodEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    }
   }
 
   const plan = this.subscription.plan || 'FREE';

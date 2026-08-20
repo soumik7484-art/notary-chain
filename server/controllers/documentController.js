@@ -471,7 +471,13 @@ exports.upload = async (req, res, next) => {
     // Increment authoritative quota on user account
     if (currentUserDoc) {
       currentUserDoc.subscription = currentUserDoc.subscription || {};
-      currentUserDoc.subscription.verificationCount = (currentUserDoc.subscription.verificationCount || 0) + 1;
+      const newCount = (currentUserDoc.subscription.verificationCount || 0) + 1;
+      currentUserDoc.subscription.verificationCount = newCount;
+
+      // When reaching 3/3 limit on Free plan, anchor reset timestamp to exactly 24 hours from now
+      if ((currentUserDoc.subscription.plan || 'FREE') === 'FREE' && newCount >= 3) {
+        currentUserDoc.subscription.currentPeriodEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      }
       await currentUserDoc.save();
     }
 

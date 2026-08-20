@@ -98,10 +98,11 @@ const Landing = () => {
       <div
         className="absolute inset-0 pointer-events-none z-0"
         style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(45, 106, 79, 0.07) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(45, 106, 79, 0.07) 1px, transparent 1px)
-          `,
+          backgroundImage: isDark
+            ? `linear-gradient(to right, rgba(181, 136, 61, 0.08) 1px, transparent 1px),
+               linear-gradient(to bottom, rgba(181, 136, 61, 0.08) 1px, transparent 1px)`
+            : `linear-gradient(to right, rgba(62, 58, 52, 0.10) 1px, transparent 1px),
+               linear-gradient(to bottom, rgba(62, 58, 52, 0.10) 1px, transparent 1px)`,
           backgroundSize: '40px 40px',
           maskImage: 'radial-gradient(ellipse 80% 80% at 50% 40%, black 30%, transparent 90%)',
           WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 40%, black 30%, transparent 90%)'
@@ -184,9 +185,34 @@ const Landing = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.05 }}
-                  className="font-display text-5xl sm:text-6xl md:text-7xl font-800 text-[#2E2A26] leading-[1.1] tracking-tight mb-6"
+                  className="font-display text-4xl sm:text-6xl md:text-7xl font-extrabold text-[#2E2A26] dark:text-[#F3F1ED] leading-[1.12] tracking-tight mb-6"
                 >
-                  Secure Digital <span className="text-[#2D6A4F]">Document Verification</span>
+                  <span className="block font-800 text-[#2E2A26] dark:text-white tracking-tight">
+                    Institutional-Grade
+                  </span>
+                  <span className="block font-800 tracking-tight mt-1">
+                    <span
+                      className="inline-block font-extrabold"
+                      style={{
+                        backgroundImage: isDark
+                          ? 'linear-gradient(90deg, #2D6A4F 0%, #40916C 22%, #D4AF37 46%, #E1B84C 52%, #D4AF37 58%, #40916C 78%, #2D6A4F 100%)'
+                          : 'linear-gradient(90deg, #1B4532 0%, #2D6A4F 22%, #B5883D 45%, #C89B3C 52%, #B5883D 58%, #2D6A4F 78%, #1B4532 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        color: 'transparent',
+                        filter: isDark
+                          ? 'drop-shadow(0 2px 14px rgba(82, 183, 136, 0.18))'
+                          : 'drop-shadow(0 2px 8px rgba(45, 106, 79, 0.10))'
+                      }}
+                    >
+                      Document Notarization
+                    </span>{' '}
+                    <span className="text-[#2E2A26] dark:text-[#F3F1ED]">for</span>
+                  </span>
+                  <span className="block font-800 text-[#2E2A26] dark:text-[#F3F1ED] tracking-tight mt-1">
+                    Modern Teams.
+                  </span>
                 </motion.h1>
 
                 {/* 3. SHORT DESCRIPTION */}
