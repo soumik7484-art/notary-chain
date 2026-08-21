@@ -66,6 +66,16 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
       formData.append('title',       title || file.name);
       formData.append('category',    category);
 
+      // Extract client text for plain text or markdown files
+      if (file.type?.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+        try {
+          const clientText = await file.text();
+          if (clientText && clientText.trim()) {
+            formData.append('extractedText', clientText.trim().substring(0, 10000));
+          }
+        } catch {}
+      }
+
       const res = await api.post('/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000    // 60 s — Groq can take a moment
