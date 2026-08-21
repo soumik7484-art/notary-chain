@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, FileText, X, Sparkles, CheckCircle2, AlertTriangle, Info, RefreshCw, ShieldCheck } from 'lucide-react';
+import { UploadCloud, FileText, X, Sparkles, CheckCircle2, AlertTriangle, Info, RefreshCw, ShieldCheck, ChevronDown, ChevronUp, Cpu, Lock } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import Button from '../common/Button';
@@ -28,6 +28,7 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
   const [category, setCategory]   = useState('contract');
   const [uploading, setUploading] = useState(false);
   const [result, setResult]       = useState(null);   // { document, aiAnalysis, aiError }
+  const [showTechMeta, setShowTechMeta] = useState(false);
 
   const onDrop = (acceptedFiles) => {
     const f = acceptedFiles[0];
@@ -263,14 +264,14 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
                         <Sparkles className="w-4 h-4 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-[#2E2A26]">AI Document Analysis</p>
+                        <p className="text-sm font-bold text-[#2E2A26]">AI Document Intelligence</p>
                         <p className="text-[10px] text-[#7B746E]">NotaryChain AI · {ai.documentType}</p>
                       </div>
                       {/* Trust score */}
                       <div className={`ml-auto px-3 py-1 rounded-full border text-xs font-bold ${
                         typeof ai.trustScore === 'number'
                           ? ai.trustScore >= 85 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : ai.trustScore >= 60 ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : ai.trustScore >= 55 ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : 'bg-red-50 text-red-700 border-red-200'
                           : 'bg-gray-50 text-gray-700 border-gray-200'
                       }`}>
@@ -280,14 +281,35 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
 
                     {/* Summary */}
                     <div className="p-4 bg-[#F6F3EE] rounded-xl border border-[#E8E2DA]">
-                      <p className="text-[11px] font-bold text-[#7B746E] uppercase tracking-wider mb-2">Summary</p>
+                      <p className="text-[11px] font-bold text-[#7B746E] uppercase tracking-wider mb-2">Legal Summary</p>
                       <p className="text-sm text-[#2E2A26] leading-relaxed">{ai.summary}</p>
                     </div>
+
+                    {/* Parties & Signatories */}
+                    {ai.parties?.length > 0 && (
+                      <div className="p-3 bg-white border border-[#E8E2DA] rounded-xl space-y-2">
+                        <p className="text-[10px] font-bold text-[#7B746E] uppercase tracking-wider">Identified Parties & Signatories</p>
+                        <div className="space-y-1.5">
+                          {ai.parties.map((p, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <span className="font-semibold text-[#2E2A26]">{p}</span>
+                              <span className="text-[10px] text-[#52796F] bg-[#F0FAF5] px-2 py-0.5 rounded border border-[#B3E4CC]">Party</span>
+                            </div>
+                          ))}
+                          {ai.signatories?.map((s, i) => (
+                            <div key={`s-${i}`} className="flex items-center justify-between text-xs">
+                              <span className="font-medium text-[#55504B]">{s}</span>
+                              <span className="text-[10px] text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">Signatory</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Key Terms */}
                     {ai.keyTerms?.length > 0 && (
                       <div>
-                        <p className="text-[11px] font-bold text-[#7B746E] uppercase tracking-wider mb-2">Key Terms</p>
+                        <p className="text-[11px] font-bold text-[#7B746E] uppercase tracking-wider mb-2">Key Legal Terms</p>
                         <div className="grid grid-cols-1 gap-1.5">
                           {ai.keyTerms.map((term, i) => (
                             <div key={i} className="flex items-start justify-between gap-3 py-2 px-3 bg-white border border-[#E8E2DA] rounded-lg">
@@ -302,7 +324,7 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
                     {/* Risk Flags */}
                     {ai.riskFlags?.length > 0 && (
                       <div>
-                        <p className="text-[11px] font-bold text-[#7B746E] uppercase tracking-wider mb-2">Risk Flags</p>
+                        <p className="text-[11px] font-bold text-[#7B746E] uppercase tracking-wider mb-2">Risk Analysis & Contradictions</p>
                         <div className="space-y-2">
                           {ai.riskFlags.map((flag, i) => {
                             const s = SEV[flag.severity] || SEV.info;
@@ -310,13 +332,63 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
                               <div key={i} className={`flex items-start gap-2.5 p-3 rounded-xl border ${s.bg} ${s.border}`}>
                                 <div className={`w-1.5 h-1.5 rounded-full ${s.dot} mt-1.5 shrink-0`} />
                                 <div className="flex-1">
-                                  <span className={`text-[10px] font-bold uppercase tracking-wider ${s.text} mr-2`}>{flag.severity}</span>
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${s.text}`}>{flag.severity}</span>
+                                    {flag.code && (
+                                      <span className="text-[9px] font-mono text-[#7B746E] bg-white/80 px-1.5 py-0.2 rounded border border-[#E8E2DA]">
+                                        {flag.code} {flag.impact ? `(${flag.impact})` : ''}
+                                      </span>
+                                    )}
+                                  </div>
                                   <span className="text-xs text-[#2E2A26]">{flag.flag}</span>
                                 </div>
                               </div>
                             );
                           })}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Collapsible Technical Metadata Section */}
+                    {result.technicalMetadata && (
+                      <div className="border border-[#E8E2DA] rounded-xl overflow-hidden bg-[#FAF8F4]">
+                        <button
+                          type="button"
+                          onClick={() => setShowTechMeta(!showTechMeta)}
+                          className="w-full p-3 flex items-center justify-between text-left hover:bg-[#F2EDE4] transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Cpu className="w-4 h-4 text-[#7B746E]" />
+                            <span className="text-xs font-semibold text-[#55504B]">Technical & Cryptographic Metadata</span>
+                          </div>
+                          <span className="text-[11px] text-[#7B746E] flex items-center gap-1 font-mono">
+                            {showTechMeta ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          </span>
+                        </button>
+                        {showTechMeta && (
+                          <div className="p-3 border-t border-[#E8E2DA] bg-white space-y-2 text-[11px] font-mono text-[#55504B]">
+                            <div className="flex justify-between">
+                              <span className="text-[#7B746E]">PDF Producer:</span>
+                              <span className="text-[#2E2A26]">{result.technicalMetadata.pdf_producer || 'Native PDF'}</span>
+                            </div>
+                            {result.technicalMetadata.c2pa?.has_c2pa && (
+                              <div className="flex justify-between">
+                                <span className="text-[#7B746E]">C2PA Manifest:</span>
+                                <span className="text-[#2D6A4F] font-bold">Anchored (urn:c2pa)</span>
+                              </div>
+                            )}
+                            {result.technicalMetadata.certificate?.issuer && (
+                              <div className="flex justify-between">
+                                <span className="text-[#7B746E]">Signature Authority:</span>
+                                <span className="text-[#2E2A26] truncate max-w-[240px]">{result.technicalMetadata.certificate.issuer}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-[#7B746E]">Exact File Hash:</span>
+                              <span className="text-[#2E2A26] truncate max-w-[240px]">{result.document?.hash}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
