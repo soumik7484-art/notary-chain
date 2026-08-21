@@ -61,9 +61,8 @@ export const AuthProvider = ({ children }) => {
   // Helper to complete Google auth flow (used by both popup and redirect)
   const completeGoogleAuth = useCallback(async (firebaseUser, mode = 'login') => {
     const cleanEmail = (firebaseUser?.email || '').toLowerCase().trim();
-
-    if (mode === 'register' && cleanEmail && isEmailRegisteredLocally(cleanEmail)) {
-      throw new Error('An account with this email already exists. Please log in instead.');
+    if (cleanEmail) {
+      registerEmailLocally(cleanEmail);
     }
 
     const fullName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Google User';
@@ -108,10 +107,7 @@ export const AuthProvider = ({ children }) => {
 
     const mergedUser = { ...googleUser, ...backendUser, avatar: photo || backendUser?.avatar };
 
-    // Register email in local registry ONLY when in register mode
-    if (mode === 'register') {
-      registerEmailLocally(cleanEmail);
-    }
+    registerEmailLocally(cleanEmail);
 
     // Always store pending tempToken and enforce 2-step verification (Face ID / Passkey)
     sessionStorage.setItem('pending_google_auth', JSON.stringify({

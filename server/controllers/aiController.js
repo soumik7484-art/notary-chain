@@ -9,14 +9,13 @@ const logger = require('../utils/logger');
 // ─── Groq Configuration ──────────────────────────────────────────────────────
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODELS = ['openai/gpt-oss-120b', 'qwen/qwen3.6-27b', 'openai/gpt-oss-20b', 'groq/compound'];
 
 async function callGroq(messages, temperature = 0.35, max_tokens = 1400, jsonFormat = false) {
   if (GROQ_API_KEY) {
-    const MAX_RETRIES = 2;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (const model of GROQ_MODELS) {
       try {
-        const payload = { model: GROQ_MODEL, messages, temperature, max_tokens };
+        const payload = { model, messages, temperature, max_tokens };
         if (jsonFormat) {
           payload.response_format = { type: 'json_object' };
         }
@@ -28,34 +27,14 @@ async function callGroq(messages, temperature = 0.35, max_tokens = 1400, jsonFor
               'Authorization': `Bearer ${GROQ_API_KEY}`,
               'Content-Type': 'application/json',
             },
-            timeout: 10000,
+            timeout: 12000,
           }
         );
         if (res.data?.choices?.[0]?.message?.content) {
           return res.data.choices[0].message.content;
         }
       } catch (e) {
-        const status = e.response?.status;
-        const retryAfter = parseInt(e.response?.headers?.['retry-after'] || '0', 10);
-
-        if (status === 429 && attempt < MAX_RETRIES) {
-          const waitMs = retryAfter > 0 ? retryAfter * 1000 : Math.pow(2, attempt + 1) * 1000;
-          logger.warn(`[Groq] Rate limited (429). Retrying in ${waitMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`);
-          await new Promise(r => setTimeout(r, waitMs));
-          continue;
-        }
-
-        if (status === 429) {
-          logger.error('[Groq] Rate limit exceeded after all retries.');
-          const err = new Error('AI service is temporarily rate-limited. Please try again in a few seconds.');
-          err.statusCode = 429;
-          err.code = 'RATE_LIMITED';
-          err.retryAfter = retryAfter || 10;
-          throw err;
-        }
-
-        logger.warn('Groq API call warning:', e.message);
-        break;
+        logger.warn(`[Groq] Model ${model} call warning:`, e.response?.data?.error?.message || e.message);
       }
     }
   }

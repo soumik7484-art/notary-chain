@@ -289,16 +289,15 @@ exports.googleAuthInit = async (req, res, next) => {
     const lastName = nameParts.slice(1).join(' ') || 'User';
 
     const cleanEmail = (email || '').toLowerCase().trim();
+    if (mongoose.connection.readyState !== 1) {
+      const { connectDB } = require('../config/db');
+      await connectDB().catch(() => {});
+    }
+
     let user;
     if (mongoose.connection.readyState === 1) {
       const query = googleId ? { $or: [{ googleId }, { email: cleanEmail }] } : { email: cleanEmail };
       user = await User.findOne(query);
-      if (mode === 'register' && user) {
-        throw new err.ConflictError('An account with this email already exists. Please log in instead.');
-      }
-      if (mode === 'login' && !user) {
-        throw new err.NotFoundError('No account found with this email. Please create an account first.');
-      }
       if (!user) {
         user = await User.create({
           email: cleanEmail,
@@ -320,24 +319,23 @@ exports.googleAuthInit = async (req, res, next) => {
         }
       }
     } else {
-      const hasAccount = mongoDbFallbackStore.has(cleanEmail);
-      if (mode === 'register' && hasAccount) {
-        throw new err.ConflictError('Already signed in with this account. Please sign in instead.');
+      let memoryUser = mongoDbFallbackStore.get(cleanEmail);
+      if (!memoryUser) {
+        memoryUser = {
+          _id: `user-${Date.now()}`,
+          email: cleanEmail || 'google-user@notarychain.com',
+          firstName,
+          lastName,
+          name: fullName || `${firstName} ${lastName}`,
+          googleId,
+          avatar,
+          faceVerified: false,
+          role: 'company',
+          isEmailVerified: true
+        };
+        mongoDbFallbackStore.set(cleanEmail, memoryUser);
       }
-      if (mode === 'login' && !hasAccount) {
-        throw new err.NotFoundError('No account found with this Google account. Please sign up first.');
-      }
-      mongoDbFallbackStore.set(cleanEmail, { email: cleanEmail, googleId });
-      user = {
-        _id: 'demo-google-user',
-        email: cleanEmail || 'google-user@notarychain.com',
-        firstName,
-        lastName,
-        name: fullName || `${firstName} ${lastName}`,
-        googleId,
-        avatar,
-        faceVerified: false
-      };
+      user = memoryUser;
     }
 
     const tempToken = jwt.sign(
