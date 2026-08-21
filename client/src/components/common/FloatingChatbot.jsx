@@ -3,19 +3,144 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Minus, Send, Sparkles } from 'lucide-react';
 import { groqChat } from '../../api/aiApi';
 
+function formatInlineText(text) {
+  if (!text) return null;
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={idx} className="font-bold text-[#1B4532]">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={idx} className="px-1 py-0.5 rounded bg-[#E8E2DA]/60 text-[11px] font-mono text-[#2D6A4F]">{part.slice(1, -1)}</code>;
+    }
+    return part;
+  });
+}
+
+function FormattedContent({ content, isUser }) {
+  if (!content) return null;
+  if (isUser) return <span>{content}</span>;
+
+  const lines = content.split('\n');
+  const elements = [];
+  let tableRows = [];
+  let listItems = [];
+
+  const flushTable = (key) => {
+    if (tableRows.length === 0) return;
+    const headerRow = tableRows[0];
+    const bodyRows = tableRows.slice(1).filter(r => !r.every(c => /^[-:\s]+$/.test(c)));
+
+    elements.push(
+      <div key={`table-${key}`} className="my-2.5 overflow-x-auto rounded-xl border border-[#E8E2DA] bg-white shadow-2xs">
+        <table className="w-full text-left text-[11px] border-collapse">
+          <thead>
+            <tr className="bg-[#F0FAF5] border-b border-[#E8E2DA]">
+              {headerRow.map((col, cIdx) => (
+                <th key={cIdx} className="px-2.5 py-1.5 font-bold text-[#2D6A4F]">
+                  {formatInlineText(col.trim())}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bodyRows.map((row, rIdx) => (
+              <tr key={rIdx} className={`border-b border-[#E8E2DA]/50 last:border-0 ${rIdx % 2 === 0 ? 'bg-white' : 'bg-[#FDFCFB]'}`}>
+                {row.map((col, cIdx) => (
+                  <td key={cIdx} className="px-2.5 py-1.5 text-[#2E2A26] align-top">
+                    {formatInlineText(col.trim())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+    tableRows = [];
+  };
+
+  const flushList = (key) => {
+    if (listItems.length === 0) return;
+    elements.push(
+      <ul key={`list-${key}`} className="my-1.5 space-y-1 pl-1">
+        {listItems.map((item, iIdx) => (
+          <li key={iIdx} className="flex items-start gap-1.5 text-[12px] text-[#2E2A26]">
+            <span className="text-[#2D6A4F] text-[10px] mt-0.5 shrink-0">●</span>
+            <span>{formatInlineText(item)}</span>
+          </li>
+        ))}
+      </ul>
+    );
+    listItems = [];
+  };
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+
+    // Table line: | col 1 | col 2 |
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      flushList(idx);
+      const cells = trimmed.slice(1, -1).split('|').map(c => c.trim());
+      tableRows.push(cells);
+      return;
+    } else {
+      flushTable(idx);
+    }
+
+    // List item: - item or * item or 1. item
+    if (/^[-*•]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed)) {
+      flushTable(idx);
+      const itemText = trimmed.replace(/^[-*•]\s+|\d+\.\s+/, '');
+      listItems.push(itemText);
+      return;
+    } else {
+      flushList(idx);
+    }
+
+    if (!trimmed) {
+      elements.push(<div key={idx} className="h-1" />);
+      return;
+    }
+
+    // Headers: ### Header
+    if (trimmed.startsWith('### ') || trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
+      const headerText = trimmed.replace(/^#+\s*/, '');
+      elements.push(
+        <h4 key={idx} className="font-display font-bold text-[13px] text-[#1B4532] mt-2 mb-1">
+          {formatInlineText(headerText)}
+        </h4>
+      );
+      return;
+    }
+
+    // Regular paragraph
+    elements.push(
+      <p key={idx} className="my-1 text-[12px] leading-relaxed text-[#2E2A26]">
+        {formatInlineText(trimmed)}
+      </p>
+    );
+  });
+
+  flushTable('final');
+  flushList('final');
+
+  return <div className="space-y-0.5">{elements}</div>;
+}
+
 const ChatBubble = ({ msg }) => (
-  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-2.5`}>
+  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-3`}>
     {msg.role === 'assistant' && (
       <div className="w-6 h-6 rounded-full bg-[#F0FAF5] border border-[#B3E4CC] text-[#2D6A4F] flex items-center justify-center text-[10px] mr-2 mt-0.5 shrink-0 font-bold">
         ✦
       </div>
     )}
-    <div className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
+    <div className={`max-w-[88%] px-3.5 py-2.5 rounded-2xl text-[12px] leading-relaxed ${
       msg.role === 'user'
         ? 'bg-[#2D6A4F] text-white rounded-tr-xs shadow-xs font-medium'
-        : 'bg-[#F6F3EE] text-[#2E2A26] border border-[#E8E2DA] rounded-tl-xs font-medium'
+        : 'bg-[#F6F3EE] text-[#2E2A26] border border-[#E8E2DA] rounded-tl-xs shadow-2xs'
     }`}>
-      {msg.content}
+      <FormattedContent content={msg.content} isUser={msg.role === 'user'} />
     </div>
   </div>
 );
@@ -130,7 +255,7 @@ export default function FloatingChatbot({ documentId = null, documentContext = '
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.96 }}
             transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
-            className="fixed bottom-6 right-6 z-50 w-[360px] rounded-2xl bg-white border border-[#E8E2DA] shadow-card-lg overflow-hidden"
+            className="fixed bottom-6 right-6 z-50 w-[360px] sm:w-[420px] rounded-2xl bg-white border border-[#E8E2DA] shadow-card-lg overflow-hidden flex flex-col max-h-[85vh]"
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 bg-[#F0FAF5] border-b border-[#E8E2DA]">
