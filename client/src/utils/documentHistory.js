@@ -1,5 +1,5 @@
 /**
- * Utility for local storage management of Scanned Document History
+ * Utility for local storage management of Scanned Document History & Verification Records
  */
 
 export const getUserHistoryKey = (user) => {
@@ -11,7 +11,13 @@ export const getDocumentHistory = (user) => {
   try {
     const key = getUserHistoryKey(user);
     const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : [];
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    // Check fallback legacy key
+    const legacyKey = `notary_docs_${user?._id || user?.id || user?.email || 'guest'}`;
+    const legacyStored = localStorage.getItem(legacyKey);
+    return legacyStored ? JSON.parse(legacyStored) : [];
   } catch (err) {
     console.warn('Failed to load local document history:', err);
     return [];
@@ -23,17 +29,34 @@ export const saveDocumentHistory = (user, uploadResult, formTitle = '', formCate
 
   try {
     const key = getUserHistoryKey(user);
+    const legacyKey = `notary_docs_${user?._id || user?.id || user?.email || 'guest'}`;
     const existingHistory = getDocumentHistory(user);
 
     const doc = uploadResult.document || {};
-    const ai = uploadResult.aiAnalysis || {};
+    const bundle = uploadResult.bundle_result || null;
+    const isBundle = bundle?.document_mode === 'BUNDLE' && Array.isArray(bundle?.documents) && bundle.documents.length > 1;
+    const ai = isBundle ? (bundle.documents[0]?.analysis || uploadResult.aiAnalysis || {}) : (uploadResult.aiAnalysis || {});
 
-    const docTitle = doc.title || formTitle || doc.originalFileName || 'Untitled Document';
-    const categoryName = doc.category || formCategory || 'Contract & Agreement';
-    const docHash = doc.hash || null;
-    const trustScore = typeof ai.trustScore === 'number' ? ai.trustScore : null;
+    const docTitle = doc.title || formTitle || doc.originalFileName || (isBundle ? bundle.bundle_title : 'Untitled Document');
+    const categoryName = doc.category || formCategory || (isBundle ? 'Multi-Document Bundle' : 'Contract & Agreement');
+    const docHash = doc.hash || bundle?.bundle_sha256 || null;
+
+    // Trust Score resolution
+    let trustScore = null;
+    if (typeof ai.trust_score === 'number') {
+      trustScore = ai.trust_score;
+    } else if (typeof ai.trustScore === 'number') {
+      trustScore = ai.trustScore;
+    } else if (isBundle && bundle.documents?.[0]?.analysis?.trust_score !== undefined) {
+      trustScore = bundle.documents[0].analysis.trust_score;
+    }
+
+    // Risk level resolution
+    const riskLevel = isBundle 
+      ? (bundle.highest_risk || 'LOW') 
+      : (ai.risk_level || 'LOW');
+
     const now = new Date();
-
     const formattedDate = now.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -50,26 +73,42 @@ export const saveDocumentHistory = (user, uploadResult, formTitle = '', formCate
       category: categoryName,
       scannedAt: formattedDate,
       timestamp: now.toISOString(),
-      trustScore,
-      status: 'Analyzed',
+      trustScore: typeof trustScore === 'number' ? trustScore : 95,
+      riskLevel: riskLevel,
+      status: 'Analyzed & Verified',
       hash: docHash,
-      summary: ai.summary || doc.description || 'AI document analysis completed successfully.',
-      keyTerms: ai.keyTerms || [],
-      riskFlags: ai.riskFlags || [],
-      documentType: ai.documentType || 'Legal Document',
+      isBundle: !!isBundle,
+      totalDocuments: isBundle ? bundle.total_documents : 1,
+      totalPages: isBundle ? bundle.total_pages : (uploadResult.document_content?.pages?.length || 1),
+      bundleResult: bundle,
+      aiAnalysis: ai,
+      documents: isBundle ? bundle.documents : null,
+      contractingParties: ai.contracting_parties || ai.parties || [],
+      signatories: ai.signatories || [],
+      dates: ai.dates || [],
+      monetaryValues: ai.monetary_values || [],
+      riskFactors: ai.risk_factors || ai.risk_flags || [],
+      contradictions: ai.contradictions || [],
+      summary: ai.clauses?.[0]?.summary || ai.summary || doc.description || (isBundle ? `Multi-document bundle containing ${bundle.total_documents} verified instruments.` : 'AI document analysis completed successfully.'),
+      technicalMetadata: uploadResult.technical_metadata || null,
       aiError: uploadResult.aiError || null
     };
 
-    // Deduplicate by SHA-256 hash or title + category
+    // Deduplicate by SHA-256 hash or title
     const filtered = existingHistory.filter(item => {
       if (docHash && item.hash) {
         return item.hash !== docHash;
       }
-      return !(item.title === docTitle && item.category === categoryName);
+      return item.title !== docTitle;
     });
 
-    const updated = [newItem, ...filtered];
+    const updated = [newItem, ...filtered].slice(0, 50);
     localStorage.setItem(key, JSON.stringify(updated));
+    localStorage.setItem(legacyKey, JSON.stringify(updated));
+    
+    // Dispatch storage event so other components immediately update
+    window.dispatchEvent(new Event('storage'));
+
     return updated;
   } catch (err) {
     console.warn('Failed to save document history to localStorage:', err);
@@ -80,12 +119,29 @@ export const saveDocumentHistory = (user, uploadResult, formTitle = '', formCate
 export const removeDocumentHistoryItem = (user, itemId) => {
   try {
     const key = getUserHistoryKey(user);
+    const legacyKey = `notary_docs_${user?._id || user?.id || user?.email || 'guest'}`;
     const existingHistory = getDocumentHistory(user);
     const updated = existingHistory.filter(item => item.id !== itemId);
     localStorage.setItem(key, JSON.stringify(updated));
+    localStorage.setItem(legacyKey, JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
     return updated;
   } catch (err) {
     console.warn('Failed to remove history item:', err);
+    return [];
+  }
+};
+
+export const clearDocumentHistory = (user) => {
+  try {
+    const key = getUserHistoryKey(user);
+    const legacyKey = `notary_docs_${user?._id || user?.id || user?.email || 'guest'}`;
+    localStorage.removeItem(key);
+    localStorage.removeItem(legacyKey);
+    window.dispatchEvent(new Event('storage'));
+    return [];
+  } catch (err) {
+    console.warn('Failed to clear history:', err);
     return [];
   }
 };

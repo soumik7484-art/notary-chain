@@ -11,6 +11,7 @@ import api from '../../api/axios';
 import { useAuth } from '../../hooks/useAuth';
 import { formatFileSize } from '../../utils/formatters';
 import Button from '../common/Button';
+import { saveDocumentHistory } from '../../utils/documentHistory';
 
 const SEV = {
   high:   { bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-700',    dot: 'bg-red-500' },
@@ -18,27 +19,6 @@ const SEV = {
   low:    { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-700',   dot: 'bg-blue-500' },
   info:   { bg: 'bg-emerald-50',border: 'border-emerald-200',text: 'text-emerald-700',dot: 'bg-emerald-500' },
 };
-
-function saveDocumentHistory(user, docData, title, category) {
-  try {
-    const storageKey = `notary_docs_${user?.id || user?._id || 'guest'}`;
-    const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const newEntry = {
-      id:          docData.document?._id || `local_${Date.now()}`,
-      title:       title || docData.document?.title || 'Untitled Document',
-      category:    category || docData.document?.category || 'contract',
-      hash:        docData.document?.hash || '',
-      status:      docData.document?.status || 'draft',
-      fileSize:    docData.document?.fileSize || 0,
-      createdAt:   new Date().toISOString(),
-      aiAnalysis:  docData.aiAnalysis || null,
-      bundleResult: docData.bundle_result || null,
-      technicalMetadata: docData.technical_metadata || null
-    };
-    existing.unshift(newEntry);
-    localStorage.setItem(storageKey, JSON.stringify(existing.slice(0, 50)));
-  } catch (e) {}
-}
 
 const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
   const { user } = useAuth();
@@ -149,13 +129,17 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
 
   if (!isOpen) return null;
 
-  const bundle = result?.bundle_result;
-  const isBundle = bundle?.document_mode === 'BUNDLE' && bundle.documents?.length > 1;
+  const bundle = result?.bundle_result || result?.bundleResult || result?.data?.bundle_result || result?.data?.bundleResult;
+  const isBundle = Boolean(bundle?.document_mode === 'BUNDLE' && Array.isArray(bundle?.documents) && bundle.documents.length > 1);
 
   // Active document for detailed view
   const currentDocObj = isBundle ? bundle.documents[activeDocIndex] : null;
-  const ai = isBundle ? currentDocObj?.analysis : result?.aiAnalysis;
-  const tech = result?.technical_metadata;
+  const ai = isBundle ? (currentDocObj?.analysis || currentDocObj) : (result?.aiAnalysis || result?.data?.aiAnalysis || result?.ai_analysis);
+  const tech = result?.technical_metadata || result?.technicalMetadata || result?.data?.technical_metadata;
+
+  const trustScoreNum = typeof ai?.trust_score === 'number' 
+    ? ai.trust_score 
+    : (typeof ai?.trustScore === 'number' ? ai.trustScore : null);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2E2A26]/40 backdrop-blur-xs">
@@ -384,26 +368,26 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
                       </div>
                       {/* Trust score & Risk badge */}
                       <div className="ml-auto flex items-center gap-2">
-                        {ai.legal_applicability === 'NOT_APPLICABLE' || ai.trust_score === null ? (
+                        {ai.legal_applicability === 'NOT_APPLICABLE' && trustScoreNum === null ? (
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800">
                             GENERAL DOCUMENT
                           </span>
                         ) : (
                           <>
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              ai.risk_level === 'LOW' ? 'bg-emerald-100 text-emerald-800' :
-                              ai.risk_level === 'MEDIUM' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
+                              (ai.risk_level || 'LOW') === 'LOW' ? 'bg-emerald-100 text-emerald-800' :
+                              (ai.risk_level || 'LOW') === 'MEDIUM' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
                             }`}>
                               {ai.risk_level || 'ANALYSIS'} RISK
                             </span>
                             <div className={`px-3 py-1 rounded-full border text-xs font-bold ${
-                              typeof ai.trust_score === 'number'
-                                ? ai.trust_score >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : ai.trust_score >= 50 ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              typeof trustScoreNum === 'number'
+                                ? trustScoreNum >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : trustScoreNum >= 50 ? 'bg-amber-50 text-amber-700 border-amber-200'
                                   : 'bg-red-50 text-red-700 border-red-200'
                                 : 'bg-gray-50 text-gray-700 border-gray-200'
                             }`}>
-                              {typeof ai.trust_score === 'number' ? `Trust ${ai.trust_score}/100` : 'Complete'}
+                              {typeof trustScoreNum === 'number' ? `Trust ${trustScoreNum}/100` : 'Verified'}
                             </div>
                           </>
                         )}
