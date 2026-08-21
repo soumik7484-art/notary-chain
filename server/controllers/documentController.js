@@ -396,16 +396,30 @@ function fallbackDocumentAnalysis(documentContent, title, category) {
  */
 async function analyzeDocumentContentWithGroq(documentContent, technicalMetadata, title, category, docIndex = 1) {
   const totalChars = documentContent.pages.reduce((acc, p) => acc + p.text.length, 0);
-  if (totalChars < 20) {
-    return {
-      status: 'EXTRACTION_INSUFFICIENT',
-      trust_score: null,
-      risk_level: 'UNDETERMINED',
-      legal_applicability: 'NOT_APPLICABLE',
-      message: 'Document content could not be reliably extracted from the file.',
-      requires_ocr: true,
-      technical_metadata: technicalMetadata
-    };
+  if (totalChars < 10) {
+    let parsedResponse = fallbackDocumentAnalysis(documentContent, title, category);
+    const cat = (parsedResponse.document?.category || category || '').toLowerCase();
+    const isLegal = parsedResponse.legal_applicability === 'APPLICABLE' ||
+                    ['contract', 'agreement', 'nda', 'msa', 'amendment', 'invoice', 'financial', 'identity'].includes(cat);
+
+    const deterministicScore = calculateDeterministicTrustScore({
+      parties: parsedResponse.contracting_parties || [],
+      signatories: parsedResponse.signatories || [],
+      contradictions: parsedResponse.contradictions || [],
+      missing_information: parsedResponse.missing_information || [],
+      risk_flags: parsedResponse.risk_flags || [],
+      identity_mismatch: false,
+      biometric_score: null,
+      category: cat,
+      legal_applicability: isLegal ? 'APPLICABLE' : 'NOT_APPLICABLE'
+    });
+
+    parsedResponse.legal_applicability = deterministicScore.legal_applicability;
+    parsedResponse.trust_score = deterministicScore.trust_score;
+    parsedResponse.risk_level = deterministicScore.risk_level;
+    parsedResponse.risk_factors = deterministicScore.risk_factors;
+    parsedResponse.technical_metadata_used_for_legal_analysis = false;
+    return parsedResponse;
   }
 
   const groqPayload = {
