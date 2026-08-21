@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getDocumentHistory, removeDocumentHistoryItem, clearDocumentHistory } from '../../utils/documentHistory';
+import RiskMeter from './RiskMeter';
 import toast from 'react-hot-toast';
 
 const SEV = {
@@ -153,14 +154,11 @@ const DocumentHistory = () => {
                       </span>
                       
                       <div className="flex items-center gap-1.5">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          (item.riskLevel || 'LOW') === 'HIGH' ? 'bg-red-50 text-red-700 border-red-200' :
-                          (item.riskLevel || 'LOW') === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                          'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        }`}>
-                          <CheckCircle2 className="w-3 h-3" />
-                          {item.riskLevel || 'LOW'} RISK
-                        </span>
+                        <RiskMeter
+                          size="compact"
+                          trustScore={score}
+                          riskLevel={item.riskLevel || 'LOW'}
+                        />
                         
                         <button
                           onClick={(e) => handleDelete(e, item)}
@@ -307,6 +305,14 @@ const DocumentHistory = () => {
                     )}
                   </div>
 
+                  {/* Prominent Risk Meter (Out of 10) */}
+                  <RiskMeter
+                    trustScore={score}
+                    riskLevel={ai?.risk_level || selectedItem.riskLevel || 'LOW'}
+                    size="card"
+                    showSegments={true}
+                  />
+
                   {/* Multi-Document Bundle Switcher */}
                   {isBundle && subDocs.length > 0 && (
                     <div className="space-y-2.5">
@@ -342,12 +348,11 @@ const DocumentHistory = () => {
                                 </div>
                               </div>
 
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-bold font-mono ${
-                                subRisk === 'HIGH' ? 'bg-red-100 text-red-800' :
-                                subRisk === 'MEDIUM' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                              }`}>
-                                {subScore}/100
-                              </span>
+                              <RiskMeter
+                                size="compact"
+                                trustScore={subScore}
+                                riskLevel={subRisk}
+                              />
                             </button>
                           );
                         })}

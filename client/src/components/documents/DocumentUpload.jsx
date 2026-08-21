@@ -12,6 +12,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { formatFileSize } from '../../utils/formatters';
 import Button from '../common/Button';
 import { saveDocumentHistory } from '../../utils/documentHistory';
+import RiskMeter from './RiskMeter';
 
 const SEV = {
   high:   { bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-700',    dot: 'bg-red-500' },
@@ -333,16 +334,12 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2.5">
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                                riskLevel === 'HIGH' ? 'bg-red-100 text-red-800' :
-                                riskLevel === 'MEDIUM' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                              }`}>
-                                {riskLevel} RISK
-                              </span>
-                              <span className="text-xs font-bold text-[#2E2A26] font-mono">
-                                {typeof subAi?.trust_score === 'number' ? `${subAi.trust_score}/100` : 'N/A'}
-                              </span>
+                            <div className="flex items-center gap-2">
+                              <RiskMeter
+                                size="compact"
+                                trustScore={subAi?.trust_score}
+                                riskLevel={riskLevel}
+                              />
                               <ArrowRight className={`w-3.5 h-3.5 transition-transform ${isSelected ? 'text-[#2D6A4F] translate-x-0.5' : 'text-[#7B746E]'}`} />
                             </div>
                           </button>
@@ -393,6 +390,14 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
                         )}
                       </div>
                     </div>
+
+                    {/* Prominent Risk Meter (Out of 10) */}
+                    <RiskMeter
+                      trustScore={trustScoreNum}
+                      riskLevel={ai.risk_level || 'LOW'}
+                      size="card"
+                      showSegments={true}
+                    />
 
                     {/* Summary / Clauses */}
                     {ai.document && (

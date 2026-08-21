@@ -15,6 +15,7 @@ import TamperDetection from './TamperDetection';
 import QRVerification from './QRVerification';
 import EnhancedRiskFlags from './EnhancedRiskFlags';
 import VerificationReport from './VerificationReport';
+import RiskMeter from './RiskMeter';
 import { useAuth } from '../../hooks/useAuth';
 import { getDocumentHistory } from '../../utils/documentHistory';
 import api from '../../api/axios';
@@ -255,6 +256,13 @@ const DocumentDetails = () => {
               hasBlockchainProof={true}
               aiRiskFlags={aiData?.riskFlags || []}
               uploadedBy={docData?.uploadedBy}
+            />
+
+            {/* Document Risk Meter out of 10 */}
+            <RiskMeter
+              trustScore={aiData?.trustScore || 91}
+              size="card"
+              showSegments={true}
             />
 
             {/* Enhanced AI Risk Flags */}
