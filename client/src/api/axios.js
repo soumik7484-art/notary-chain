@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
+    ? 'https://server-lovat-gamma-13.vercel.app/api' 
+    : '/api');
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,

@@ -85,15 +85,27 @@ const DocumentUpload = ({ isOpen, onClose, onSuccess }) => {
       formData.append('title',       title || file.name);
       formData.append('category',    category);
 
-      // Client-side text read for text/plain and markdown files
-      if (file.type?.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-        try {
-          const clientText = await file.text();
-          if (clientText && clientText.trim()) {
-            formData.append('extractedText', clientText.trim().substring(0, 10000));
+      // Client-side text read for all document types (plain text, markdown, and pure PDF streams)
+      try {
+        const clientRaw = await file.text();
+        if (clientRaw && clientRaw.trim()) {
+          if (file.type?.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+            formData.append('extractedText', clientRaw.trim().substring(0, 50000));
+          } else if (file.name.endsWith('.pdf') || file.type === 'application/pdf') {
+            // Extract text chunks from PDF streams directly in the browser
+            const chunks = [];
+            const tjLit = /\(([^)\\]*(?:\\.[^)\\]*)*)\)\s*Tj/g;
+            let m;
+            while ((m = tjLit.exec(clientRaw)) !== null) {
+              const cleaned = m[1].replace(/\\([()\\])/g, '$1').trim();
+              if (cleaned.length > 0 && !/^[\x00-\x1F]+$/.test(cleaned)) chunks.push(cleaned);
+            }
+            if (chunks.length > 0) {
+              formData.append('extractedText', chunks.join('\n').substring(0, 50000));
+            }
           }
-        } catch {}
-      }
+        }
+      } catch {}
 
       const res = await api.post('/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
