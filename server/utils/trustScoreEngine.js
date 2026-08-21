@@ -69,26 +69,22 @@ function calculateDeterministicTrustScore({
   legal_applicability = null
 }) {
   const cat = (category || '').toLowerCase();
-  const isLegalInstrument = ['contract', 'agreement', 'nda', 'msa', 'amendment', 'invoice', 'financial', 'identity', 'kyc', 'report'].some(k => cat.includes(k));
-
-  // If document is a general, technical, or non-contractual document
-  if (!isLegalInstrument || legal_applicability === 'NOT_APPLICABLE') {
-    return {
-      legal_applicability: 'NOT_APPLICABLE',
-      trust_score: null,
-      risk_level: 'NOT_APPLICABLE',
-      risk_factors: []
-    };
-  }
+  const isAgreement = ['contract', 'agreement', 'nda', 'msa', 'amendment'].some(k => cat.includes(k));
+  const isFinancial = ['invoice', 'financial', 'receipt', 'billing'].some(k => cat.includes(k));
+  const isIdentity = ['identity', 'kyc', 'passport', 'id', 'verification'].some(k => cat.includes(k));
 
   let score = 100;
   const appliedFactors = [];
 
-  // 1. Missing Parties check (for bilateral/multilateral agreements)
-  const isAgreement = ['contract', 'agreement', 'nda', 'msa', 'amendment'].includes(cat);
-  if (isAgreement && parties.length < 2) {
-    score += DEDUCTION_RULES.MISSING_PARTIES.impact;
-    appliedFactors.push(DEDUCTION_RULES.MISSING_PARTIES);
+  // 1. Missing Parties check (for bilateral agreements)
+  if (isAgreement) {
+    if (parties.length < 2) {
+      score += DEDUCTION_RULES.MISSING_PARTIES.impact;
+      appliedFactors.push(DEDUCTION_RULES.MISSING_PARTIES);
+    }
+  } else if (!isFinancial && !isIdentity && parties.length === 0) {
+    // For general documents with no identified publisher/organization
+    score -= 8;
   }
 
   // 2. Missing Signatures
@@ -131,7 +127,7 @@ function calculateDeterministicTrustScore({
   // 5. Additional Risk Flags & Suspicious instructions
   for (const rf of risk_flags) {
     const flagText = (typeof rf === 'string' ? rf : (rf.flag || rf.explanation || '')).toLowerCase();
-    if (flagText.includes('suspicious payment') || flagText.includes('wire transfer') || flagText.includes('payment instruction')) {
+    if (flagText.includes('suspicious payment') || flagText.includes('wire transfer') || flagText.includes('offshore') || flagText.includes('payment instruction')) {
       if (!appliedFactors.some(f => f.code === 'SUSPICIOUS_PAYMENT')) {
         score += DEDUCTION_RULES.SUSPICIOUS_PAYMENT.impact;
         appliedFactors.push(DEDUCTION_RULES.SUSPICIOUS_PAYMENT);
@@ -144,7 +140,12 @@ function calculateDeterministicTrustScore({
     }
   }
 
-  // Clamp 10 to 98
+  // 6. Missing information
+  if (Array.isArray(missing_information) && missing_information.length > 0) {
+    score -= Math.min(15, missing_information.length * 5);
+  }
+
+  // Clamp trust score between 10 and 98
   const trustScore = Math.max(10, Math.min(98, score));
 
   // Determine Risk Level

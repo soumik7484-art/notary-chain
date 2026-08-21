@@ -52,9 +52,10 @@ export const saveDocumentHistory = (user, uploadResult, formTitle = '', formCate
     }
 
     // Risk level resolution
-    const riskLevel = isBundle 
+    const rawRisk = isBundle 
       ? (bundle.highest_risk || 'LOW') 
       : (ai.risk_level || 'LOW');
+    const riskLevel = (rawRisk === 'NOT_APPLICABLE' || !rawRisk) ? 'LOW' : rawRisk.toUpperCase();
 
     const now = new Date();
     const formattedDate = now.toLocaleDateString('en-US', {
@@ -73,7 +74,7 @@ export const saveDocumentHistory = (user, uploadResult, formTitle = '', formCate
       category: categoryName,
       scannedAt: formattedDate,
       timestamp: now.toISOString(),
-      trustScore: typeof trustScore === 'number' ? trustScore : 95,
+      trustScore: typeof trustScore === 'number' ? trustScore : (riskLevel === 'HIGH' ? 30 : (riskLevel === 'MEDIUM' ? 80 : 98)),
       riskLevel: riskLevel,
       status: 'Analyzed & Verified',
       hash: docHash,

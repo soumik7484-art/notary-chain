@@ -285,7 +285,7 @@ const DocumentHistory = () => {
                         (ai?.risk_level || selectedItem.riskLevel || 'LOW') === 'MEDIUM' ? 'bg-amber-100 text-amber-800 border-amber-300' :
                         'bg-emerald-100 text-emerald-800 border-emerald-300'
                       }`}>
-                        {ai?.risk_level || selectedItem.riskLevel || 'LOW'} RISK
+                        {((ai?.risk_level === 'NOT_APPLICABLE' || !ai?.risk_level) ? (selectedItem.riskLevel === 'NOT_APPLICABLE' || !selectedItem.riskLevel ? 'LOW' : selectedItem.riskLevel) : ai.risk_level)} RISK
                       </span>
 
                       <div className={`px-2.5 py-0.5 rounded-full border font-bold font-mono ${

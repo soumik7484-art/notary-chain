@@ -386,9 +386,9 @@ function fallbackDocumentAnalysis(documentContent, title, category) {
     contradictions,
     missing_information: missingInfo,
     risk_flags: riskFlags,
-    legal_applicability: isLegalInstrument ? 'APPLICABLE' : 'NOT_APPLICABLE',
-    trust_score: isLegalInstrument ? 80 : null,
-    risk_level: isLegalInstrument ? 'LOW' : 'NOT_APPLICABLE',
+    legal_applicability: 'APPLICABLE',
+    trust_score: isLegalInstrument ? (contractingParties.length >= 2 ? 98 : 80) : 90,
+    risk_level: isLegalInstrument ? (contractingParties.length >= 2 ? 'LOW' : 'MEDIUM') : 'LOW',
     technical_metadata_used_for_legal_analysis: false
   };
 }
