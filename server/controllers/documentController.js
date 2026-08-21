@@ -97,20 +97,24 @@ function extractPdfStreams(buffer) {
   return pieces.join(' ').replace(/\s+/g, ' ').trim();
 }
 
-/* ─── Text extractor (PDF / DOCX / TXT / image) ───────────────────── */
+/* ─── Text extractor (PDF / DOCX / TXT / image / binary) ──────────── */
 async function extractText(fileBuffer, mimeType, fileName) {
   try {
     if (!fileBuffer || fileBuffer.length === 0) return '';
 
-    const isPdf = mimeType === 'application/pdf' || (fileName && fileName.toLowerCase().endsWith('.pdf'));
+    // 1. Check if PDF (by MIME, extension, or %PDF magic bytes)
+    const isPdf = mimeType === 'application/pdf' ||
+                  (fileName && fileName.toLowerCase().endsWith('.pdf')) ||
+                  (fileBuffer.length >= 5 && fileBuffer.slice(0, 5).toString('latin1').includes('%PDF'));
+
     if (isPdf) {
-      // 1. First try fast universal stream decompressor
+      // First try fast universal stream decompressor
       const streamText = extractPdfStreams(fileBuffer);
       if (streamText && streamText.length >= 10) {
         return streamText;
       }
 
-      // 2. Try pdf-parse as secondary
+      // Try pdf-parse as secondary
       try {
         const pdfModule = require('pdf-parse');
         const PDFClass = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
@@ -132,9 +136,11 @@ async function extractText(fileBuffer, mimeType, fileName) {
       return `[PDF Document: ${fileName || 'Uploaded PDF'}]\nCategory: Legal / Verification Document\nType: PDF Document (SHA-256 Hash Verified)\nSize: ${fileBuffer.length} bytes`;
     }
 
+    // 2. Check if DOCX (ZIP archive starting with PK\x03\x04)
     const isDocx = mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
                    mimeType === 'application/msword' ||
-                   (fileName && (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc')));
+                   (fileName && (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc'))) ||
+                   (fileBuffer.length >= 4 && fileBuffer.slice(0, 4).toString('hex') === '504b0304');
     if (isDocx) {
       try {
         const mammoth = require('mammoth');
@@ -145,9 +151,25 @@ async function extractText(fileBuffer, mimeType, fileName) {
       }
     }
 
-    const isTxt = mimeType === 'text/plain' || (fileName && fileName.toLowerCase().endsWith('.txt'));
-    if (isTxt) {
-      return fileBuffer.toString('utf8').trim();
+    // 3. Check if plain text / UTF-8 readable text
+    try {
+      const utf8Str = fileBuffer.toString('utf8');
+      let printable = 0;
+      const checkLen = Math.min(utf8Str.length, 1000);
+      for (let i = 0; i < checkLen; i++) {
+        const code = utf8Str.charCodeAt(i);
+        if ((code >= 32 && code <= 126) || code === 10 || code === 13 || code === 9) printable++;
+      }
+      if (checkLen > 0 && printable / checkLen > 0.75 && utf8Str.trim().length >= 10) {
+        return utf8Str.trim();
+      }
+    } catch {}
+
+    // 4. Extract readable ASCII / Latin1 phrases from binary
+    const latin = fileBuffer.toString('latin1');
+    const wordMatches = latin.match(/[A-Z][a-z]{2,}(?:\s+[A-Za-z0-9,.:;'-]+){2,}/g);
+    if (wordMatches && wordMatches.length > 0) {
+      return wordMatches.join(' ').replace(/\s+/g, ' ').trim();
     }
 
     return `[Document: ${fileName || 'Uploaded Document'}]\nCategory: Legal / Verification Document\nMIME: ${mimeType || 'unknown'}\nFile Size: ${fileBuffer.length} bytes`;
@@ -228,7 +250,7 @@ function analyzeDocumentSemantics(text, title, category) {
   else if (lower.includes('invoice') || lower.includes('bill to') || lower.includes('amount due')) detectedType = 'Invoice / Financial Receipt';
   else if (lower.includes('employment') || lower.includes('offer letter')) detectedType = 'Employment Agreement';
   else if (lower.includes('license') || lower.includes('software agreement')) detectedType = 'Software License Agreement';
-  else detectedType = `${category.toUpperCase()} Document`;
+  else detectedType = `${(category || 'contract').toUpperCase()} Document`;
 
   // 2. Extract Parties
   const partyMatch = cleanText.match(/(?:between|by and between)[:\s\n]+([^\n,]+)(?:,|\s+and|\n)+([^\n,]+)/i);
@@ -240,9 +262,9 @@ function analyzeDocumentSemantics(text, title, category) {
 
   // 3. Extract Effective Date
   const dateMatch = cleanText.match(/(?:effective date|dated|entered into on)[:\s\n]+([^\n.]+)/i);
-  if (dateMatch && !dateMatch[1].toLowerCase().includes('missing') && !dateMatch[1].toLowerCase().includes('unstated')) {
+  if (dateMatch && !dateMatch[1].toLowerCase().includes('missing') && !dateMatch[1].toLowerCase().includes('unstated') && !dateMatch[1].toLowerCase().includes('pending')) {
     keyTerms.push({ label: 'Effective Date', value: dateMatch[1].trim().slice(0, 40) });
-  } else if (lower.includes('date missing') || lower.includes('unstated') || lower.includes('[date]')) {
+  } else {
     riskFlags.push({ severity: 'medium', flag: 'Effective date is unstated, missing, or marked as pending.' });
     baseScore -= 15;
   }
@@ -262,31 +284,31 @@ function analyzeDocumentSemantics(text, title, category) {
   // 6. Check for Unlimited Indemnification / Liability Risk
   if (lower.includes('unlimited') && (lower.includes('indemnif') || lower.includes('liability') || lower.includes('without cap') || lower.includes('unconditionally indemnify'))) {
     riskFlags.push({ severity: 'high', flag: 'Contains un-capped unilateral indemnification and unlimited liability clause.' });
-    baseScore -= 20;
+    baseScore -= 25;
   }
 
   // 7. Check for Unilateral Termination at will without notice
   if ((lower.includes('terminate') || lower.includes('termination')) && (lower.includes('without notice') || lower.includes('immediately at any moment') || lower.includes('at will'))) {
     riskFlags.push({ severity: 'high', flag: 'Unilateral termination without notice or compensation for work completed.' });
-    baseScore -= 20;
+    baseScore -= 25;
   }
 
   // 8. Check for Missing / Unsigned Signatures
-  if (lower.includes('unsigned') || lower.includes('pending - unsigned') || lower.includes('[pending') || lower.includes('_________')) {
+  if (lower.includes('unsigned') || lower.includes('pending - unsigned') || lower.includes('[pending') || lower.includes('_________') || !lower.includes('signed by')) {
     riskFlags.push({ severity: 'medium', flag: 'Document signature block contains missing, unexecuted, or pending signature fields.' });
     baseScore -= 15;
   }
 
   // 9. Check for IP / Patent Forfeiture
   if (lower.includes('forfeits all') || lower.includes('perpetuity worldwide') || lower.includes('waives all rights')) {
-    riskFlags.push({ severity: 'medium', flag: 'Broad forfeiture of intellectual property rights, moral rights, or claims.' });
-    baseScore -= 10;
+    riskFlags.push({ severity: 'high', flag: 'Broad forfeiture of intellectual property rights, moral rights, or claims.' });
+    baseScore -= 20;
   }
 
   // 10. Check for Arbitrary Withholding of Payment
-  if (lower.includes('withhold 100%') || lower.includes('subjective aesthetic') || lower.includes('without dispute mediation')) {
-    riskFlags.push({ severity: 'medium', flag: 'Subjective compensation terms with unilateral payment withholding rights.' });
-    baseScore -= 10;
+  if (lower.includes('withhold') && (lower.includes('wages') || lower.includes('payment') || lower.includes('accrued') || lower.includes('100%'))) {
+    riskFlags.push({ severity: 'high', flag: 'Subjective compensation terms with unilateral payment or wage withholding rights.' });
+    baseScore -= 20;
   }
 
   // If no high/medium risks found, add positive structural validation
@@ -298,13 +320,13 @@ function analyzeDocumentSemantics(text, title, category) {
   }
 
   // Calculate final dynamic score based on actual text findings
-  const finalTrustScore = Math.max(20, Math.min(98, baseScore));
+  const finalTrustScore = Math.max(15, Math.min(98, baseScore));
 
   // Generate dynamic summary mentioning actual findings
   const riskSummaryNote = riskFlags.filter(r => r.severity === 'high' || r.severity === 'medium').length;
   let dynamicSummary = '';
   if (riskSummaryNote > 0) {
-    dynamicSummary = `Analysis of "${title}" (${detectedType}) identified ${riskSummaryNote} notable risk item(s) requiring review. Cryptographic SHA-256 fingerprint anchored on Polygon Amoy.`;
+    dynamicSummary = `Analysis of "${title}" (${detectedType}) identified ${riskSummaryNote} notable risk item(s) requiring legal review. Cryptographic SHA-256 fingerprint anchored on Polygon Amoy.`;
   } else {
     dynamicSummary = `Comprehensive audit of "${title}" (${detectedType}) completed with high confidence. Terms, mutual covenants, and structural integrity validated for blockchain notarization.`;
   }
@@ -319,7 +341,7 @@ function analyzeDocumentSemantics(text, title, category) {
   return {
     summary: dynamicSummary,
     keyTerms: keyTerms.slice(0, 6),
-    riskFlags: riskFlags.slice(0, 5),
+    riskFlags: riskFlags.slice(0, 6),
     trustScore: finalTrustScore,
     documentType: detectedType
   };
@@ -330,30 +352,29 @@ async function analyzeWithGroq(ocrText, title, category) {
 
   const hasRealText = cleanText && cleanText.length >= 15 && !cleanText.startsWith('[PDF Document:') && !cleanText.startsWith('[Document:');
 
-  const systemPrompt = `You are an expert legal document verification analyst for NotaryChain.
-Analyze the provided document and return a JSON object ONLY (no markdown, no backticks, no extra commentary) with exactly this structure:
-{
-  "summary": "3-4 sentence plain-language explanation of what this document is, parties involved, key obligations, or verification assessment",
-  "keyTerms": [
-    { "label": "term name (e.g. Document Name, Parties, Effective Date, Governing Law, Integrity)", "value": "extracted value" }
-  ],
-  "riskFlags": [
-    { "severity": "high|medium|low|info", "flag": "description of the risk or notable item" }
-  ],
-  "trustScore": 88,
-  "documentType": "Non-Disclosure Agreement / Master Services Agreement / Contract / Invoice / ID Verification / etc"
-}
+  const systemPrompt = `You are an expert legal document verification and risk audit analyst for NotaryChain.
+Carefully analyze the specific clauses and obligations in the provided document.
+You MUST calculate a dynamic, individualized trustScore (integer between 10 and 98) based STRICTLY on the actual risks, clauses, completeness, and structure found in this text:
 
-Scoring Rules:
-- Calculate trustScore dynamically between 10 and 100 based on legal validity, completeness, and structure.
-- For complete agreements with clear parties: score 85-96.
-- For standard verification documents or cryptographic notarization requests: score 82-94 with extracted metadata terms and info flags.
-- For documents with severe risks (unlimited liability, unilateral termination): deduct 15-25 points.
-- DO NOT complain about missing text; provide a thorough, professional verification analysis.`;
+Scoring Rubric:
+- 90-98: Exceptional, balanced bilateral contract with clear dates, defined parties, dispute resolution, mutual liability caps, and executed signatures.
+- 75-89: Solid standard contract with minor missing details or low-severity ambiguities.
+- 55-74: Moderate risk contract: missing effective dates, ambiguous scope, unbalanced indemnification, or unsigned blocks.
+- 25-54: High risk / toxic contract: unlimited liability, unilateral termination at will without notice, one-sided IP forfeiture, or severe missing covenants.
+- 10-24: Severe risk / fraudulent / invalid legal instrument.
+
+Return ONLY a valid JSON object with:
+{
+  "summary": "3-4 sentences summarizing the actual parties, specific business scope, and key legal risks",
+  "keyTerms": [ { "label": "term name", "value": "extracted value" } ],
+  "riskFlags": [ { "severity": "high|medium|low|info", "flag": "specific risk description" } ],
+  "trustScore": 72,
+  "documentType": "detected document type"
+}`;
 
   const contextNote = hasRealText
-    ? `Document title: "${title}"\nCategory: ${category}\n\nDocument Text:\n${cleanText.substring(0, 4500)}`
-    : `Document Title: "${title}"\nCategory: ${category}\nVerification Type: Cryptographic Document Vault (Polygon Amoy)\nSHA-256 Signature Status: Cryptographically Anchored & Tamper-Evident\nPlease provide a full legal document notarization and compliance analysis based on the document category, title, and cryptographic anchoring metadata.`;
+    ? `Document Title: "${title}"\nCategory: ${category}\n\nDocument Text:\n${cleanText.substring(0, 4500)}`
+    : `Document Title: "${title}"\nCategory: ${category}\nVerification Type: Cryptographic Document Vault (Polygon Amoy)\nSHA-256 Signature Status: Cryptographically Anchored & Tamper-Evident\nPlease analyze this ${category} document titled "${title}".`;
 
   const raw = await callGroq([
     { role: 'system', content: systemPrompt },
@@ -369,8 +390,8 @@ Scoring Rules:
           summary: parsed.summary,
           keyTerms: Array.isArray(parsed.keyTerms) ? parsed.keyTerms : [],
           riskFlags: Array.isArray(parsed.riskFlags) ? parsed.riskFlags : [],
-          trustScore: Math.max(10, Math.min(100, Math.round(parsed.trustScore))),
-          documentType: parsed.documentType || category.toUpperCase()
+          trustScore: Math.max(10, Math.min(98, Math.round(parsed.trustScore))),
+          documentType: parsed.documentType || (category || 'contract').toUpperCase()
         };
       }
     } catch (parseErr) {
