@@ -41,6 +41,19 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date(), uptime: process.uptime(), environment: env.NODE_ENV });
 });
 
+app.get('/api/analysis-health', (req, res) => {
+  const isGrok = !!(process.env.XAI_API_KEY || process.env.GROQ_API_KEY || process.env.GROK_API_KEY);
+  res.json({
+    status: 'ok',
+    environment: process.env.NODE_ENV || 'production',
+    analysis_version: '2.1.0',
+    grok_configured: isGrok,
+    pdf_extraction_available: true,
+    ocr_available: true,
+    bundle_analysis_available: true
+  });
+});
+
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/documents', require('./routes/documentRoutes'));

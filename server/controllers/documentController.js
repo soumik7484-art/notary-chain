@@ -38,12 +38,14 @@ exports.multerUpload = multer({
 }).single('file');
 
 /* ─── AI Intelligence Engine (xAI Grok & Groq Support) ─────────────── */
-const GROQ_API_KEY  = process.env.GROQ_API_KEY || '';
-const XAI_API_KEY   = process.env.XAI_API_KEY  || '';
+const NOTARYCHAIN_ANALYSIS_VERSION = "2.1.0";
 
 async function callGroq(messages, temperature = 0.1, max_tokens = 2000) {
+  const groqKey = process.env.GROQ_API_KEY || process.env.GROK_API_KEY || '';
+  const xaiKey  = process.env.XAI_API_KEY || (process.env.GROK_API_KEY && process.env.GROK_API_KEY.startsWith('xai-') ? process.env.GROK_API_KEY : '');
+
   // 1. Try xAI Grok if key provided
-  if (XAI_API_KEY) {
+  if (xaiKey) {
     const xaiModels = ['grok-2-1212', 'grok-2-vision-1212', 'grok-beta'];
     for (const model of xaiModels) {
       try {
@@ -57,7 +59,7 @@ async function callGroq(messages, temperature = 0.1, max_tokens = 2000) {
           },
           {
             headers: {
-              'Authorization': `Bearer ${XAI_API_KEY}`,
+              'Authorization': `Bearer ${xaiKey}`,
               'Content-Type':  'application/json'
             },
             timeout: 30000
@@ -66,13 +68,13 @@ async function callGroq(messages, temperature = 0.1, max_tokens = 2000) {
         const text = res.data?.choices?.[0]?.message?.content;
         if (text) return text;
       } catch (err) {
-        logger.debug(`xAI model ${model} skipped:`, err.response?.data?.error || err.message);
+        logger.warn(`xAI Grok model ${model} failed:`, err.response?.data?.error?.message || err.message);
       }
     }
   }
 
-  // 2. Try Groq
-  if (GROQ_API_KEY) {
+  // 2. Try Groq (GPT OSS / Llama)
+  if (groqKey) {
     const groqModels = ['openai/gpt-oss-120b', 'qwen/qwen3.6-27b', 'openai/gpt-oss-20b', 'groq/compound'];
     for (const model of groqModels) {
       try {
@@ -87,7 +89,7 @@ async function callGroq(messages, temperature = 0.1, max_tokens = 2000) {
           },
           {
             headers: {
-              'Authorization': `Bearer ${GROQ_API_KEY}`,
+              'Authorization': `Bearer ${groqKey}`,
               'Content-Type':  'application/json'
             },
             timeout: 30000
@@ -781,6 +783,7 @@ exports.upload = async (req, res, next) => {
               originalFileName: file.originalname,
               fileSize:         file.size
             },
+        analysis_version: NOTARYCHAIN_ANALYSIS_VERSION,
         document_content,
         technical_metadata,
         bundle_result: bundleResult,
