@@ -134,8 +134,17 @@ function extractPdfPagesPure(buffer) {
           if (!lat.includes('<x:xmpmeta') && !lat.includes('<?xpacket')) {
             allStreams.push(lat);
           }
+        } else {
+          // Stream is uncompressed plain text stream
+          if (!rawStream.includes('<x:xmpmeta') && !rawStream.includes('<?xpacket')) {
+            allStreams.push(rawStream);
+          }
         }
-      } catch {}
+      } catch {
+        if (!rawStream.includes('<x:xmpmeta') && !rawStream.includes('<?xpacket')) {
+          allStreams.push(rawStream);
+        }
+      }
     }
 
     // Parse CMaps
