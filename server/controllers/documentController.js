@@ -594,24 +594,25 @@ exports.upload = async (req, res, next) => {
 
     try {
       if (bundleDetection.document_mode === 'BUNDLE') {
-        const subDocAnalyses = [];
-        for (const subDoc of bundleDetection.documents) {
-          const analysis = await analyzeDocumentContentWithGroq(
-            subDoc.content,
-            technical_metadata,
-            subDoc.title,
-            subDoc.category,
-            subDoc.document_index
-          );
-          subDocAnalyses.push({
-            document_index: subDoc.document_index,
-            title: subDoc.title,
-            category: subDoc.category,
-            pages: subDoc.pages,
-            content_hash: subDoc.content_hash,
-            analysis
-          });
-        }
+        const subDocAnalyses = await Promise.all(
+          bundleDetection.documents.map(async (subDoc) => {
+            const analysis = await analyzeDocumentContentWithGroq(
+              subDoc.content,
+              technical_metadata,
+              subDoc.title,
+              subDoc.category,
+              subDoc.document_index
+            );
+            return {
+              document_index: subDoc.document_index,
+              title: subDoc.title,
+              category: subDoc.category,
+              pages: subDoc.pages,
+              content_hash: subDoc.content_hash,
+              analysis
+            };
+          })
+        );
 
         const highestRisk = subDocAnalyses.some(d => d.analysis.risk_level === 'HIGH')
           ? 'HIGH'
