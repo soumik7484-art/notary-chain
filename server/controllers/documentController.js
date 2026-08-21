@@ -261,7 +261,18 @@ function fallbackDocumentAnalysis(documentContent, title, category) {
     names.forEach(n => teamMembers.push({ value: n, role: 'Team Member', source_page: 1 }));
   }
 
-  // Match parties
+  // Match parties from legal phrases
+  const partyPhraseMatch = allText.match(/(?:entered into by and between|entered into between|by and between|between|parties:?|by and among)\s+([A-Z][a-zA-Z0-9\s.,&-]+?)\s+(?:and|&)\s+([A-Z][a-zA-Z0-9\s.,&-]+?)(?:\.|\n|Effective|\(|\s+a\s+[A-Z]|$)/i);
+  if (partyPhraseMatch) {
+    [partyPhraseMatch[1], partyPhraseMatch[2]].forEach(p => {
+      const clean = p.replace(/^(?:Seller|Buyer)[:\s]*/i, '').trim();
+      if (clean.length > 2 && !contractingParties.some(cp => cp.value === clean)) {
+        contractingParties.push({ value: clean, type: 'organization', source_page: 1, confidence: 0.95 });
+      }
+    });
+  }
+
+  // Match parties from header lines
   const partyLineMatch = allText.match(/(?:Parties|By and Between|Seller|Buyer)[:\s\n]+([^\n.]+)/i);
   if (partyLineMatch) {
     const rawParties = partyLineMatch[1].split(/\s+(?:and|And|&)\s+/);
@@ -284,7 +295,20 @@ function fallbackDocumentAnalysis(documentContent, title, category) {
     });
   }
 
-  // Match signatories
+  // Match signatories from structured sign blocks and inline "Signed: Name, Role and Name, Role"
+  const signedLineMatch = allText.match(/(?:Signed:?|Signatures?:?|Signatory:?|Signed by:?)\s*([^\n.]+)/i);
+  if (signedLineMatch) {
+    const sigEntries = signedLineMatch[1].split(/\s+(?:and|And|&)\s+/);
+    sigEntries.forEach(entry => {
+      const parts = entry.split(/[,–-]\s*/);
+      const name = parts[0].replace(/^(?:Signed:?|Signatures?:?|By:?|Client:?|Provider:?)\s*/i, '').trim();
+      const role = parts[1] ? parts[1].trim() : 'Authorized Signatory';
+      if (name.length > 2 && !signatories.some(s => s.value === name)) {
+        signatories.push({ value: name, role: role, source_page: 1, confidence: 0.95 });
+      }
+    });
+  }
+
   const sigMatches = allText.match(/(?:Signed by|Name:|Signatory:|Director:|CEO:|Chief Executive Officer:?|Signed by Provider:?|Signed by Client:?)\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi);
   if (sigMatches) {
     sigMatches.forEach(sm => {
@@ -312,8 +336,8 @@ function fallbackDocumentAnalysis(documentContent, title, category) {
     });
   }
 
-  // Match dates with context
-  const dateLineRegex = /([A-Za-z\s]+)[:—–-]\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]+\s+\d{4})/g;
+  // Match dates with context (support YYYY-MM-DD, DD Month YYYY, Month DD, YYYY)
+  const dateLineRegex = /([A-Za-z\s]+)[:—–-]\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]+\s+\d{4}|[A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/g;
   let dMatch;
   while ((dMatch = dateLineRegex.exec(allText)) !== null) {
     const label = dMatch[1].trim();
@@ -329,6 +353,10 @@ function fallbackDocumentAnalysis(documentContent, title, category) {
     else if (lLow.includes('invoice') || lLow.includes('date')) type = 'INVOICE_DATE';
     dates.push({ label, type, value: val, source_page: 1 });
   }
+
+  // Match governing law
+  const govMatch = allText.match(/(?:Governing Law|Jurisdiction)[:\s]+(?:the\s+)?([A-Za-z\s]+?)(?:\.|\n|$)/i);
+  const governingLaw = govMatch ? govMatch[1].trim() : (lower.includes('singapore') ? 'Singapore' : (lower.includes('california') ? 'State of California' : (lower.includes('delaware') ? 'Delaware' : null)));
 
   return {
     status: 'SUCCESS',
@@ -352,7 +380,7 @@ function fallbackDocumentAnalysis(documentContent, title, category) {
     ],
     clauses,
     obligations: [],
-    governing_law: lower.includes('singapore') ? 'Singapore' : (lower.includes('delaware') ? 'Delaware' : null),
+    governing_law: governingLaw,
     contradictions,
     missing_information: missingInfo,
     risk_flags: riskFlags,
