@@ -5,7 +5,7 @@ import { usePlan } from '../../context/PlanContext';
 import UpgradeModal from './UpgradeModal';
 
 export default function UsageTracker() {
-  const { currentPlan, currentPlanKey, verificationsUsed, verificationsLimit, remainingCount, isUnlimited, usagePercentage, resetDate, fetchQuota } = usePlan();
+  const { currentPlan, currentPlanKey, verificationsUsed, verificationsLimit, remainingCount, isUnlimited, usagePercentage, resetDate, fetchQuota, resetQuota } = usePlan();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [now, setNow] = useState(Date.now());
 
@@ -176,12 +176,21 @@ export default function UsageTracker() {
               <span className="text-[#2D6A4F] font-mono font-bold tracking-tight">
                 {getCountdownText()}
               </span>
-              <button
-                onClick={() => setShowUpgradeModal(true)}
-                className="text-[10px] font-bold text-[#2D6A4F] hover:underline cursor-pointer"
-              >
-                Upgrade now
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => resetQuota?.()}
+                  className="text-[10px] font-semibold text-[#7B746E] hover:text-[#2E2A26] hover:underline cursor-pointer"
+                  title="Reset verification count to 0"
+                >
+                  Reset (0/3)
+                </button>
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="text-[10px] font-bold text-[#2D6A4F] hover:underline cursor-pointer"
+                >
+                  Upgrade now
+                </button>
+              </div>
             </div>
           </div>
         ) : (

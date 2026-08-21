@@ -177,6 +177,35 @@ export function PlanProvider({ children }) {
     }
   }, [user]);
 
+  const resetQuota = useCallback(async () => {
+    try {
+      const res = await api.post('/users/reset-quota');
+      const data = res.data?.data || res.data;
+      if (data) {
+        setQuotaData(data);
+        if (user) {
+          localStorage.setItem(getUserStorageKey(user), JSON.stringify(data));
+        }
+      }
+    } catch (err) {
+      setQuotaData(prev => {
+        const resetObj = {
+          ...prev,
+          verificationCount: 0,
+          remaining: prev.isUnlimited ? 'Unlimited' : (prev.verificationLimit || 3),
+          isAtLimit: false,
+          canVerify: true,
+          currentPeriodStart: new Date().toISOString(),
+          currentPeriodEnd: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        };
+        if (user) {
+          localStorage.setItem(getUserStorageKey(user), JSON.stringify(resetObj));
+        }
+        return resetObj;
+      });
+    }
+  }, [user]);
+
   const value = {
     currentPlan,
     currentPlanKey,
@@ -190,6 +219,7 @@ export function PlanProvider({ children }) {
     resetDate: quotaData.currentPeriodEnd,
     incrementUsage,
     upgradePlan,
+    resetQuota,
     fetchQuota,
     loading
   };

@@ -81,3 +81,20 @@ exports.upgradePlan = async (req, res, next) => {
   } catch (x) { next(x); }
 };
 
+exports.resetQuota = async (req, res, next) => {
+  try {
+    const rawUserId = req.user?._id || req.user?.id;
+    const u = await User.findById(rawUserId);
+    if (!u) throw new err.NotFoundError('User not found');
+
+    u.subscription = u.subscription || {};
+    u.subscription.verificationCount = 0;
+    u.subscription.currentPeriodStart = new Date();
+    u.subscription.currentPeriodEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await u.save();
+
+    const quota = u.getQuotaInfo();
+    resU.success(res, quota, 'Verification limit reset to 0');
+  } catch (x) { next(x); }
+};
+

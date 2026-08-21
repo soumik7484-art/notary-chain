@@ -1,372 +1,359 @@
-'use strict';
-
 const zlib = require('zlib');
 const logger = require('./logger');
-const { extractTechnicalMetadata, parsePdfPages } = require('./pdfStructureParser');
-const OCRService = require('../services/ai/ocrService');
-const ocrService = typeof OCRService === 'function' ? new OCRService() : (OCRService.ocrService || OCRService);
 
 /**
- * pdfExtractor.js
- * 
- * Production Page-by-Page Document Text and Metadata Extractor.
- * Extracts pure, visible document text isolated from PDF dictionary internals,
- * ReportLab metadata, C2PA manifests, and SSL certificates.
+ * Technical Metadata Keywords & Filter Lists
+ * These must NEVER be treated as legal document content.
  */
-
-const MIN_TEXT_THRESHOLD = 30; // Characters per page before OCR fallback
+const METADATA_SIGNATURE_KEYWORDS = [
+  'reportlab', 'pdf producer', 'pdf creator', 'xmp', 'c2pa', 'ssl.com',
+  'certificate authority', 'root ca', 'ica r1', 'rsa root', 'pkcs',
+  'flatedecode', 'endobj', 'obj <<', 'trailer <<', 'xref'
+];
 
 /**
- * Extracts visible document text and separated technical metadata from any uploaded document.
- * 
- * @param {Buffer} buffer - File buffer
- * @param {string} mimeType - e.g. 'application/pdf', 'text/plain'
- * @param {string} fileName - Original file name
- * @param {string} clientExtractedText - Optional pre-extracted text from browser
- * @returns {Promise<{
- *   document_content: { pages: Array<{ page_number: number, text: string }>, full_text: string },
- *   technical_metadata: object,
- *   extraction_confidence: number,
- *   ocr_used: boolean
- * }>}
+ * Extract technical and cryptographic provenance metadata from raw PDF bytes.
  */
-async function extractDocumentData(buffer, mimeType, fileName, clientExtractedText = '') {
-  let technicalMetadata = extractTechnicalMetadata(buffer);
-  let pages = [];
-  let fullText = '';
-  let ocrUsed = false;
-  let extractionConfidence = 100;
+function extractTechnicalMetadata(buffer) {
+  const meta = {
+    pdf_creator: '',
+    pdf_producer: '',
+    creation_timestamp: '',
+    c2pa: {},
+    certificates: {},
+    xmp: {},
+    cryptographic_metadata: {}
+  };
 
+  if (!buffer || buffer.length === 0) return meta;
+  const raw = buffer.toString('latin1');
+
+  // 1. PDF Producer & Creator
+  const producerMatch = raw.match(/\/Producer\s*\(([^)]+)\)/i) || raw.match(/\/Producer\s*<([^>]+)>/i);
+  if (producerMatch) meta.pdf_producer = producerMatch[1].trim();
+
+  const creatorMatch = raw.match(/\/Creator\s*\(([^)]+)\)/i) || raw.match(/\/Creator\s*<([^>]+)>/i);
+  if (creatorMatch) meta.pdf_creator = creatorMatch[1].trim();
+
+  const dateMatch = raw.match(/\/CreationDate\s*\(([^)]+)\)/i);
+  if (dateMatch) meta.creation_timestamp = dateMatch[1].trim();
+
+  // 2. C2PA / Digital Signature references
+  if (raw.includes('c2pa') || raw.includes('C2PA')) {
+    meta.c2pa = {
+      detected: true,
+      manifest_type: 'C2PA Cryptographic Provenance Claim',
+      standard: 'C2PA 1.3 / ISO 22144'
+    };
+  }
+
+  // 3. SSL.com / X.509 Certificate Authorities
+  const sslMatch = raw.match(/(SSL\.com[^\r\n()<>{}\[\]]+)/i);
+  if (sslMatch) {
+    meta.certificates = {
+      detected: true,
+      issuer: sslMatch[1].trim(),
+      type: 'X.509 Cryptographic Certificate'
+    };
+  }
+
+  // 4. XMP Metadata packet
+  const xmpMatch = raw.match(/<x:xmpmeta[\s\S]*?<\/x:xmpmeta>/i);
+  if (xmpMatch) {
+    meta.xmp = {
+      detected: true,
+      length: xmpMatch[0].length
+    };
+  }
+
+  return meta;
+}
+
+/**
+ * Filter out technical metadata, XMP, C2PA headers, and ReportLab internal markers from extracted text.
+ */
+function filterOutTechnicalMetadata(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  const cleanLines = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Check if line is purely PDF metadata or certificate dump
+    const lower = trimmed.toLowerCase();
+    const isTechnicalDump =
+      lower.startsWith('<?xpacket') ||
+      lower.startsWith('<x:xmpmeta') ||
+      lower.startsWith('xmlns:') ||
+      lower.includes('c2pa.claim') ||
+      lower.includes('ssl.com c2pa') ||
+      lower.includes('ssl.com rsa root') ||
+      lower.includes('reportlab generated') ||
+      lower.includes('pdf-1.') ||
+      lower.includes('/flatedecode') ||
+      lower.includes('trailer <</');
+
+    if (!isTechnicalDump) {
+      cleanLines.push(trimmed);
+    }
+  }
+
+  return cleanLines.join('\n').trim();
+}
+
+/**
+ * Parse page-aware text from PDF using pure JavaScript decompression + CMap table decoding.
+ * Guaranteed 100% serverless safe with zero external worker threads.
+ */
+function extractPdfPagesPure(buffer) {
   try {
-    if (!buffer || buffer.length === 0) {
-      return {
-        document_content: { pages: [], full_text: '' },
-        technical_metadata: technicalMetadata,
-        extraction_confidence: 0,
-        ocr_used: false
-      };
-    }
+    if (!buffer || buffer.length === 0) return [];
+    const raw = buffer.toString('latin1');
+    const allStreams = [];
 
-    const isPdf = mimeType === 'application/pdf' ||
-                  (fileName && fileName.toLowerCase().endsWith('.pdf')) ||
-                  (buffer.length >= 5 && buffer.slice(0, 5).toString('latin1').includes('%PDF'));
-
-    if (isPdf) {
-      // 1. Parse PDF pages and isolated content streams
-      const parsedPages = parsePdfPages(buffer);
-      const cMap = extractCMapFromBuffer(buffer);
-
-      for (const p of parsedPages) {
-        const pageTextPieces = [];
-
-        for (const stream of p.raw_content_streams) {
-          const streamText = extractTextFromStream(stream, cMap);
-          if (streamText && streamText.trim().length > 0) {
-            pageTextPieces.push(streamText.trim());
-          }
-        }
-
-        let pageCleanText = sanitizeExtractedText(pageTextPieces.join('\n'));
-
-        // 2. OCR Fallback for empty or image-only pages
-        if (pageCleanText.length < MIN_TEXT_THRESHOLD) {
-          try {
-            // Attempt secondary pdf-parse text extraction for this page
-            const secondaryText = await tryPdfParseFallback(buffer);
-            if (secondaryText && secondaryText.length >= MIN_TEXT_THRESHOLD) {
-              pageCleanText = secondaryText;
-            } else if (buffer.length > 500) {
-              // Attempt OCR on buffer
-              const ocrRes = await ocrService.processBuffer(buffer, 'application/pdf', { pageNumber: p.page_number });
-              if (ocrRes?.text && ocrRes.text.length > pageCleanText.length) {
-                pageCleanText = ocrRes.text;
-                ocrUsed = true;
-                extractionConfidence = ocrRes.confidence || 85;
-              }
-            }
-          } catch (ocrErr) {
-            logger.warn(`[PDF Extractor] OCR fallback note on page ${p.page_number}:`, ocrErr.message);
-          }
-        }
-
-        pages.push({
-          page_number: p.page_number,
-          text: pageCleanText
-        });
-      }
-
-      // If client pre-extracted text exists and backend extracted text is shorter, merge / enrich
-      if (clientExtractedText && clientExtractedText.trim().length > 20) {
-        const totalLen = pages.reduce((sum, p) => sum + p.text.length, 0);
-        if (totalLen < 30) {
-          pages = [{ page_number: 1, text: sanitizeExtractedText(clientExtractedText.trim()) }];
-        }
-      }
-
-      fullText = pages.map(p => p.text).filter(Boolean).join('\n\n');
-
-      // If full text is still empty, mark extraction failed
-      if (fullText.length < 15) {
-        extractionConfidence = 0;
-      }
-
-      return {
-        document_content: { pages, full_text: fullText },
-        technical_metadata: technicalMetadata,
-        extraction_confidence: extractionConfidence,
-        ocr_used: ocrUsed
-      };
-    }
-
-    // 3. Handle DOCX
-    const isDocx = mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-                   mimeType === 'application/msword' ||
-                   (fileName && (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc'))) ||
-                   (buffer.length >= 4 && buffer.slice(0, 4).toString('hex') === '504b0304');
-    if (isDocx) {
+    // Extract all streams
+    const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+    let sm;
+    while ((sm = streamRegex.exec(raw)) !== null) {
+      const rawStream = sm[1];
       try {
-        const mammoth = require('mammoth');
-        const result = await mammoth.extractRawText({ buffer });
-        const docxText = sanitizeExtractedText(result.value || '');
-        return {
-          document_content: {
-            pages: [{ page_number: 1, text: docxText }],
-            full_text: docxText
-          },
-          technical_metadata: technicalMetadata,
-          extraction_confidence: docxText.length > 20 ? 98 : 30,
-          ocr_used: false
-        };
-      } catch (docErr) {
-        logger.warn('[PDF Extractor] Mammoth DOCX parsing error:', docErr.message);
-      }
+        const streamBuf = Buffer.from(rawStream, 'latin1');
+        let inflated = null;
+        try {
+          inflated = zlib.inflateSync(streamBuf);
+        } catch {
+          try {
+            inflated = zlib.inflateRawSync(streamBuf);
+          } catch {}
+        }
+        if (inflated) {
+          const lat = inflated.toString('latin1');
+          // Skip pure XML metadata streams
+          if (!lat.includes('<x:xmpmeta') && !lat.includes('<?xpacket')) {
+            allStreams.push(lat);
+          }
+        }
+      } catch {}
     }
 
-    // 4. Handle Plain Text / Markdown
+    // Parse CMaps
+    const cMap = new Map();
+    allStreams.forEach(stream => {
+      const bfcharRegex = /<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>/g;
+      let bfc;
+      while ((bfc = bfcharRegex.exec(stream)) !== null) {
+        const code = parseInt(bfc[1], 16);
+        const uni = String.fromCodePoint(parseInt(bfc[2], 16));
+        cMap.set(code, uni);
+      }
+      const bfrangeRegex = /<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>/g;
+      let bfr;
+      while ((bfr = bfrangeRegex.exec(stream)) !== null) {
+        const start = parseInt(bfr[1], 16);
+        const end = parseInt(bfr[2], 16);
+        let uniStart = parseInt(bfr[3], 16);
+        for (let c = start; c <= end; c++) {
+          cMap.set(c, String.fromCodePoint(uniStart++));
+        }
+      }
+    });
+
+    const decodeHex = (hex) => {
+      hex = hex.replace(/\s+/g, '');
+      let res = '';
+      if (hex.length >= 4 && hex.length % 4 === 0) {
+        for (let i = 0; i < hex.length; i += 4) {
+          const val = parseInt(hex.substr(i, 4), 16);
+          if (cMap.has(val)) res += cMap.get(val);
+          else if (val >= 32 && val <= 126) res += String.fromCharCode(val);
+        }
+      }
+      if (!res && hex.length >= 2 && hex.length % 2 === 0) {
+        for (let i = 0; i < hex.length; i += 2) {
+          const val = parseInt(hex.substr(i, 2), 16);
+          if (cMap.has(val)) res += cMap.get(val);
+          else if (val >= 32 && val <= 126) res += String.fromCharCode(val);
+        }
+      }
+      return res.trim();
+    };
+
+    const decodeLiteral = (lit) => {
+      return lit
+        .replace(/\\([()\\])/g, '$1')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\r')
+        .replace(/\\t/g, '\t')
+        .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)))
+        .trim();
+    };
+
+    const pageChunks = [];
+    allStreams.forEach(stream => {
+      const chunks = [];
+      // (Literal) Tj
+      const tjLit = /\(([^)\\]*(?:\\.[^)\\]*)*)\)\s*Tj/g;
+      let m;
+      while ((m = tjLit.exec(stream)) !== null) {
+        const d = decodeLiteral(m[1]);
+        if (d.length > 0 && !/^[\x00-\x1F]+$/.test(d)) chunks.push(d);
+      }
+
+      // <Hex> Tj
+      const tjHex = /<([0-9a-fA-F\s]+)>\s*Tj/g;
+      while ((m = tjHex.exec(stream)) !== null) {
+        const d = decodeHex(m[1]);
+        if (d.length > 0 && !/^[\x00-\x1F]+$/.test(d)) chunks.push(d);
+      }
+
+      // [(Array) 10 <Hex>] TJ
+      const tjArray = /\[([\s\S]*?)\]\s*TJ/g;
+      while ((m = tjArray.exec(stream)) !== null) {
+        const inner = m[1];
+        const partRegex = /\(([^)\\]*(?:\\.[^)\\]*)*)\)|<([0-9a-fA-F\s]+)>/g;
+        let p;
+        let line = '';
+        while ((p = partRegex.exec(inner)) !== null) {
+          if (p[1] !== undefined) line += decodeLiteral(p[1]) + ' ';
+          else if (p[2] !== undefined) line += decodeHex(p[2]) + ' ';
+        }
+        if (line.trim().length > 0) chunks.push(line.trim());
+      }
+
+      if (chunks.length > 0) {
+        const text = chunks.join('\n');
+        const clean = filterOutTechnicalMetadata(text);
+        if (clean.length > 0) pageChunks.push(clean);
+      }
+    });
+
+    if (pageChunks.length > 0) {
+      return pageChunks.map((text, idx) => ({
+        page_number: idx + 1,
+        text
+      }));
+    }
+
+    return [];
+  } catch (err) {
+    logger.warn('extractPdfPagesPure error:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Universal Master Document Parser
+ * Returns: {
+ *   document_content: { pages: [{ page_number: 1, text: "..." }] },
+ *   technical_metadata: { ... },
+ *   extraction_status: 'SUCCESS' | 'EXTRACTION_INSUFFICIENT' | 'REQUIRES_OCR',
+ *   total_chars: number
+ * }
+ */
+async function extractDocumentContentAndMetadata(fileBuffer, mimeType, fileName, clientExtractedText = '') {
+  const technicalMetadata = extractTechnicalMetadata(fileBuffer);
+  let pages = [];
+
+  // If client provided text (e.g. from plain text / markdown / client reader)
+  if (clientExtractedText && clientExtractedText.trim().length >= 15) {
+    pages = [{
+      page_number: 1,
+      text: filterOutTechnicalMetadata(clientExtractedText.trim())
+    }];
+  }
+
+  const isPdf = mimeType === 'application/pdf' ||
+                (fileName && fileName.toLowerCase().endsWith('.pdf')) ||
+                (fileBuffer && fileBuffer.length >= 5 && fileBuffer.slice(0, 5).toString('latin1').includes('%PDF'));
+
+  if (pages.length === 0 && isPdf && fileBuffer && fileBuffer.length > 0) {
+    // 1. Try pure JS page-aware extractor
+    pages = extractPdfPagesPure(fileBuffer);
+
+    // 2. Try pdf-parse v2 if pure JS got few or no words
+    if (pages.length === 0 || pages.reduce((acc, p) => acc + p.text.length, 0) < 30) {
+      try {
+        const pdfModule = require('pdf-parse');
+        const PDFClass = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
+        if (PDFClass && typeof PDFClass === 'function') {
+          const parser = new PDFClass({ data: fileBuffer });
+          if (typeof parser.load === 'function') await parser.load();
+          const res = await parser.getText();
+          if (res?.text && res.text.trim().length >= 15) {
+            const rawPages = res.text.split(/--\s*\d+\s*of\s*\d+\s*--/);
+            pages = rawPages
+              .map((p, idx) => ({
+                page_number: idx + 1,
+                text: filterOutTechnicalMetadata(p.trim())
+              }))
+              .filter(p => p.text.length > 0);
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // DOCX support
+  const isDocx = mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                 mimeType === 'application/msword' ||
+                 (fileName && (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc'))) ||
+                 (fileBuffer && fileBuffer.length >= 4 && fileBuffer.slice(0, 4).toString('hex') === '504b0304');
+  if (pages.length === 0 && isDocx && fileBuffer && fileBuffer.length > 0) {
     try {
-      const utf8Str = buffer.toString('utf8');
+      const mammoth = require('mammoth');
+      const result = await mammoth.extractRawText({ buffer: fileBuffer });
+      if (result.value && result.value.trim().length >= 10) {
+        pages = [{
+          page_number: 1,
+          text: filterOutTechnicalMetadata(result.value.trim())
+        }];
+      }
+    } catch {}
+  }
+
+  // Plain text / UTF-8 fallback
+  if (pages.length === 0 && fileBuffer && fileBuffer.length > 0) {
+    try {
+      const utf8Str = fileBuffer.toString('utf8');
       let printable = 0;
       const checkLen = Math.min(utf8Str.length, 1000);
       for (let i = 0; i < checkLen; i++) {
         const code = utf8Str.charCodeAt(i);
         if ((code >= 32 && code <= 126) || code === 10 || code === 13 || code === 9) printable++;
       }
-      if (checkLen > 0 && printable / checkLen > 0.75 && utf8Str.trim().length >= 10) {
-        const text = sanitizeExtractedText(utf8Str.trim());
-        return {
-          document_content: {
-            pages: [{ page_number: 1, text }],
-            full_text: text
-          },
-          technical_metadata: technicalMetadata,
-          extraction_confidence: 100,
-          ocr_used: false
-        };
+      if (checkLen > 0 && printable / checkLen > 0.75 && utf8Str.trim().length >= 15) {
+        pages = [{
+          page_number: 1,
+          text: filterOutTechnicalMetadata(utf8Str.trim())
+        }];
       }
     } catch {}
-
-    // 5. Handle Image Files (PNG, JPG, WEBP, TIFF) -> Run OCR
-    const isImage = mimeType?.startsWith('image/') || /\.(png|jpe?g|webp|tiff?|bmp)$/i.test(fileName || '');
-    if (isImage) {
-      const ocrRes = await ocrService.processBuffer(buffer, mimeType);
-      const imgText = sanitizeExtractedText(ocrRes.text || '');
-      return {
-        document_content: {
-          pages: [{ page_number: 1, text: imgText }],
-          full_text: imgText
-        },
-        technical_metadata: technicalMetadata,
-        extraction_confidence: ocrRes.confidence || 80,
-        ocr_used: true
-      };
-    }
-
-    return {
-      document_content: {
-        pages: [{ page_number: 1, text: '' }],
-        full_text: ''
-      },
-      technical_metadata: technicalMetadata,
-      extraction_confidence: 0,
-      ocr_used: false
-    };
-  } catch (err) {
-    logger.error('[PDF Extractor] Fatal extraction error:', err.message);
-    return {
-      document_content: { pages: [], full_text: '' },
-      technical_metadata: technicalMetadata,
-      extraction_confidence: 0,
-      ocr_used: false,
-      error: err.message
-    };
   }
-}
 
-/**
- * Extracts CMap font character mappings across PDF buffer.
- */
-function extractCMapFromBuffer(buffer) {
-  const cMap = new Map();
-  try {
-    const raw = buffer.toString('latin1');
+  const totalChars = pages.reduce((acc, p) => acc + p.text.length, 0);
 
-    // bfchar: <0001> <0048>
-    const bfcharRegex = /<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>/g;
-    let bfc;
-    while ((bfc = bfcharRegex.exec(raw)) !== null) {
-      const code = parseInt(bfc[1], 16);
-      const uni = String.fromCodePoint(parseInt(bfc[2], 16));
-      cMap.set(code, uni);
-    }
+  let extractionStatus = 'SUCCESS';
+  let requiresOcr = false;
 
-    // bfrange: <0001> <0005> <0041>
-    const bfrangeRegex = /<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>/g;
-    let bfr;
-    while ((bfr = bfrangeRegex.exec(raw)) !== null) {
-      const start = parseInt(bfr[1], 16);
-      const end = parseInt(bfr[2], 16);
-      let uniStart = parseInt(bfr[3], 16);
-      for (let c = start; c <= end; c++) {
-        cMap.set(c, String.fromCodePoint(uniStart++));
-      }
-    }
-  } catch {}
-  return cMap;
-}
+  if (totalChars < 20) {
+    extractionStatus = 'EXTRACTION_INSUFFICIENT';
+    requiresOcr = true;
+  }
 
-/**
- * Extracts visible text chunks from a decompressed content stream.
- */
-function extractTextFromStream(stream, cMap) {
-  const lines = [];
-
-  const decodeHex = (hex) => {
-    hex = hex.replace(/\s+/g, '');
-    let res = '';
-    if (hex.length >= 4 && hex.length % 4 === 0) {
-      for (let i = 0; i < hex.length; i += 4) {
-        const val = parseInt(hex.substr(i, 4), 16);
-        if (cMap && cMap.has(val)) res += cMap.get(val);
-        else if (val >= 32 && val <= 126) res += String.fromCharCode(val);
-      }
-    }
-    if (!res && hex.length >= 2 && hex.length % 2 === 0) {
-      for (let i = 0; i < hex.length; i += 2) {
-        const val = parseInt(hex.substr(i, 2), 16);
-        if (cMap && cMap.has(val)) res += cMap.get(val);
-        else if (val >= 32 && val <= 126) res += String.fromCharCode(val);
-      }
-    }
-    return res.trim();
+  return {
+    document_content: { pages },
+    technical_metadata: technicalMetadata,
+    extraction_status: extractionStatus,
+    requires_ocr: requiresOcr,
+    total_chars: totalChars
   };
-
-  const decodeLiteral = (lit) => {
-    return lit
-      .replace(/\\([()\\])/g, '$1')
-      .replace(/\\n/g, '\n')
-      .replace(/\\r/g, '\r')
-      .replace(/\\t/g, '\t')
-      .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)))
-      .trim();
-  };
-
-  // 1. Literal Tj: (Text) Tj
-  const tjLit = /\(([^)\\]*(?:\\.[^)\\]*)*)\)\s*Tj/g;
-  let m;
-  while ((m = tjLit.exec(stream)) !== null) {
-    const d = decodeLiteral(m[1]);
-    if (d.length > 0 && !/^[\x00-\x1F]+$/.test(d)) lines.push(d);
-  }
-
-  // 2. Hex Tj: <00480065> Tj
-  const tjHex = /<([0-9a-fA-F\s]+)>\s*Tj/g;
-  while ((m = tjHex.exec(stream)) !== null) {
-    const d = decodeHex(m[1]);
-    if (d.length > 0 && !/^[\x00-\x1F]+$/.test(d)) lines.push(d);
-  }
-
-  // 3. Array TJ: [(Text) 10 <Hex>] TJ
-  const tjArray = /\[([\s\S]*?)\]\s*TJ/g;
-  while ((m = tjArray.exec(stream)) !== null) {
-    const inner = m[1];
-    const partRegex = /\(([^)\\]*(?:\\.[^)\\]*)*)\)|<([0-9a-fA-F\s]+)>/g;
-    let p;
-    let line = '';
-    while ((p = partRegex.exec(inner)) !== null) {
-      if (p[1] !== undefined) line += decodeLiteral(p[1]) + ' ';
-      else if (p[2] !== undefined) line += decodeHex(p[2]) + ' ';
-    }
-    if (line.trim().length > 0) lines.push(line.trim());
-  }
-
-  // If Tj/TJ operators yielded text, return it
-  const result = lines.join(' ').replace(/\s+/g, ' ').trim();
-  if (result.length >= 10) return result;
-
-  // Fallback: Scan stream for English text sentences
-  const englishMatches = stream.match(/[A-Z][a-zA-Z0-9,.:;'"\-\s]{15,}/g);
-  if (englishMatches) {
-    const cleaned = englishMatches
-      .filter(s => !s.includes('endobj') && !s.includes('xref') && !s.includes('trailer') && !s.includes('FlateDecode'))
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (cleaned.length >= 15) return cleaned;
-  }
-
-  return result;
-}
-
-/**
- * Secondary fallback using pdf-parse if available.
- */
-async function tryPdfParseFallback(buffer) {
-  try {
-    const pdfModule = require('pdf-parse');
-    const PDFClass = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
-    if (PDFClass && typeof PDFClass === 'function') {
-      const parser = new PDFClass({ data: buffer });
-      if (typeof parser.load === 'function') await parser.load();
-      const res = await parser.getText();
-      if (res?.text && res.text.trim().length >= MIN_TEXT_THRESHOLD) return sanitizeExtractedText(res.text.trim());
-    } else if (typeof pdfModule === 'function') {
-      const data = await pdfModule(buffer);
-      if (data?.text && data.text.trim().length >= MIN_TEXT_THRESHOLD) return sanitizeExtractedText(data.text.trim());
-    }
-  } catch {}
-  return '';
-}
-
-/**
- * Sanitizes extracted text by removing internal PDF object references,
- * ReportLab producer lines, and raw XML XMP blocks that could leak into legal text.
- */
-function sanitizeExtractedText(rawText) {
-  if (!rawText) return '';
-
-  return rawText
-    // Remove raw XML packets
-    .replace(/<\?xpacket[\s\S]*?\?>/gi, '')
-    .replace(/<x:xmpmeta[\s\S]*?<\/x:xmpmeta>/gi, '')
-    .replace(/<rdf:RDF[\s\S]*?<\/rdf:RDF>/gi, '')
-    // Remove PDF syntax artifacts
-    .replace(/\b\d+\s+\d+\s+obj\b/g, '')
-    .replace(/\bendobj\b/g, '')
-    .replace(/\bxref\b[\s\S]*?trailer/gi, '')
-    .replace(/\bstartxref[\s\S]*?%%EOF/gi, '')
-    .replace(/\/Type\s*\/[A-Za-z0-9]+/g, '')
-    .replace(/\/Filter\s*\/[A-Za-z0-9]+/g, '')
-    .replace(/\/Length\s+\d+/g, '')
-    // Remove isolated ReportLab producer metadata lines
-    .replace(/ReportLab Generated PDF document[\s\S]*?http:\/\/www\.reportlab\.com/gi, '')
-    // Normalize whitespace
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n\s*\n/g, '\n\n')
-    .trim();
 }
 
 module.exports = {
-  MIN_TEXT_THRESHOLD,
-  extractDocumentData,
-  sanitizeExtractedText
+  extractTechnicalMetadata,
+  filterOutTechnicalMetadata,
+  extractPdfPagesPure,
+  extractDocumentContentAndMetadata
 };
