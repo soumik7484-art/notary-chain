@@ -38,6 +38,8 @@ exports.multerUpload = multer({
 
 /* ─────────────────────────────────────────────────────────────── */
 
+const connectDB = require('../config/db');
+
 /**
  * POST /api/documents/upload
  * Accepts multipart/form-data with field "file".
@@ -46,6 +48,7 @@ exports.multerUpload = multer({
  */
 exports.upload = async (req, res, next) => {
   try {
+    try { await connectDB(); } catch {}
     const { title, category, description } = req.body;
     const file = req.file;
 
