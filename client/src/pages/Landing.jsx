@@ -7,6 +7,7 @@ import {
   CreditCard, Activity, Building2, Key, Server
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import LoadingScreen from '../components/LoadingScreen';
 
 /* ── 3D Floating & Rotating Gold Coin Component ─────────────────────────── */
 const AnimatedGoldCoin = () => {
@@ -90,9 +91,12 @@ const Landing = () => {
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
   const [showAuthCards, setShowAuthCards] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   return (
-    <div className="min-h-screen bg-[#FAF8F4] text-[#2E2A26] font-sans flex flex-col justify-between overflow-x-hidden select-none transition-colors relative">
+    <>
+      {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
+      <div className="min-h-screen bg-[#FAF8F4] text-[#2E2A26] font-sans flex flex-col justify-between overflow-x-hidden select-none transition-colors relative">
 
       {/* ── Technical Blueprint Grid Overlay (Landing Page Only) ── */}
       <div
@@ -541,6 +545,7 @@ const Landing = () => {
         </div>
       </footer>
     </div>
+    </>
   );
 };
 
